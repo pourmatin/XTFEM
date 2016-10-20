@@ -1,0 +1,15 @@
+# MPI host file
+# Rui Zhang, rui.zhang4@utdallas.edu
+# Thu Mar 03 13:42:19 CST 2016 
+
+# ccbc2 slots=12
+# ccbc3 slots=12
+# ccbc4 slots=12
+# ccbc5 slots=12
+# ccbc6 slots=12
+# ccbc7 slots=12
+# ccbc8 slots=12
+ccbc10
+ccbc11
+ccbc12
+ccbc13

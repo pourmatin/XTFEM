@@ -1,0 +1,144 @@
+<?xml version="1.0"?>
+<session>
+    <breakpoints>
+        <breakpoint type="breakpoint" enabled="no" appliesto="process 0" condition="" language="auto" filename="kokkos_kernel.cpp" line="256" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_kernel.cpp" pending="yes"/>
+        <breakpoint type="breakpoint" enabled="no" appliesto="process 0" condition="" language="auto" filename="kokkos_kernel.cpp" line="133" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_kernel.cpp" pending="yes"/>
+        <breakpoint type="breakpoint" enabled="no" appliesto="process 0" condition="" language="auto" filename="kokkos_kernel.cpp" line="135" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_kernel.cpp" pending="yes"/>
+        <breakpoint type="tracepoint" enabled="no" appliesto="process 0" condition="" language="auto" filename="kokkos_kernel.h" line="47" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_kernel.h" pending="yes" startafter="0" triggerevery="100" stopafter="0" variables="ii, ngpe, ne" displayname=""/>
+        <breakpoint type="breakpoint" enabled="no" appliesto="process 0" condition="" language="auto" filename="kokkos_host.cpp" line="121" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_host.cpp" pending="yes"/>
+        <breakpoint type="breakpoint" enabled="yes" appliesto="process 0" condition="" language="auto" filename="kokkos_kernel.h" line="68" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_kernel.h" pending="yes"/>
+        <breakpoint type="breakpoint" enabled="yes" appliesto="process 0" condition="" language="auto" filename="kokkos_kernel.cpp" line="118" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_kernel.cpp" pending="yes"/>
+        <breakpoint type="breakpoint" enabled="yes" appliesto="process 0" condition="" language="auto" filename="kokkos_kernel.cpp" line="38" function="" fullpath="/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src/kokkos_kernel.cpp" pending="no"/>
+    </breakpoints>
+    <buildmanager>
+        <build_command>make</build_command>
+        <build_working_directory>/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/temp-host-sent_c3d8_1824_2435.inp</build_working_directory>
+    </buildmanager>
+    <configuration>
+        <version>
+            <version>51session</version>
+        </version>
+        <checkpointing>
+            <provider>GDB</provider>
+        </checkpointing>
+        <default-breakpoints>
+            <abort>yes</abort>
+            <catch>no</catch>
+            <cuda-kernel-launch>yes</cuda-kernel-launch>
+            <exec>no</exec>
+            <exit>no</exit>
+            <fork>no</fork>
+            <mic-offload>yes</mic-offload>
+            <throw>no</throw>
+        </default-breakpoints>
+        <memory-debugging>
+            <backtraces>yes</backtraces>
+            <cuda-memcheck>no</cuda-memcheck>
+            <custom-allocators></custom-allocators>
+            <enabled>no</enabled>
+            <guard-pages>check-guard-top,guard-pages=1</guard-pages>
+            <interval>100</interval>
+            <preload>dmallocth</preload>
+            <setting>none</setting>
+            <subset>*</subset>
+        </memory-debugging>
+        <messages>
+            <cuda-kernel-launch>no</cuda-kernel-launch>
+            <default-breakpoints>yes</default-breakpoints>
+            <fatal-signals>yes</fatal-signals>
+            <memory-debugging-errors>yes</memory-debugging-errors>
+            <mic-offload>yes</mic-offload>
+            <outdated-source-file>yes</outdated-source-file>
+            <show-cppcheck-timeout>no</show-cppcheck-timeout>
+            <show-cuda-step-time-warning>yes</show-cuda-step-time-warning>
+            <signals>yes</signals>
+            <user-defined-breakpoints>no</user-defined-breakpoints>
+            <watchpoints>yes</watchpoints>
+        </messages>
+        <startup>
+            <application-name>/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/temp-host-sent_c3d8_1824_2435.inp/xtfem3d.host</application-name>
+            <arguments></arguments>
+            <core-file></core-file>
+            <cuda-enabled>no</cuda-enabled>
+            <default-number-of-mpc-tasks>0</default-number-of-mpc-tasks>
+            <default-number-of-nodes>1</default-number-of-nodes>
+            <default-number-of-openmp-threads>1</default-number-of-openmp-threads>
+            <default-number-of-processes>1</default-number-of-processes>
+            <gdbserver-host></gdbserver-host>
+            <gdbserver-port>10000</gdbserver-port>
+            <input-file></input-file>
+            <mpi-arguments></mpi-arguments>
+            <mpi-enabled>yes</mpi-enabled>
+            <mpi-environment-variables></mpi-environment-variables>
+            <mpirun>/opt/apps/tacc/bin/ibrun</mpirun>
+            <mpirun-is-script>no</mpirun-is-script>
+            <openmp-enabled>yes</openmp-enabled>
+            <override-mpirun>yes</override-mpirun>
+            <plugins></plugins>
+            <quick-restart>yes</quick-restart>
+            <use-cuda-software-preemption>no</use-cuda-software-preemption>
+            <use-input-file>no</use-input-file>
+            <working-directory></working-directory>
+        </startup>
+        <template-variables>
+            <variable>
+                <name>PROJECT_TAG</name>
+                <value>nanobiofiber</value>
+            </variable>
+            <variable>
+                <name>QUEUE_TAG</name>
+                <value>development</value>
+            </variable>
+            <variable>
+                <name>WALL_CLOCK_LIMIT_TAG</name>
+                <value>00:30:00</value>
+            </variable>
+        </template-variables>
+    </configuration>
+    <evaluations>
+        <item name="dmat"/>
+        <item name="ii"/>
+        <item name="jj"/>
+    </evaluations>
+    <groups>
+        <colorcount>2</colorcount>
+        <viewmode>AutomaticView</viewmode>
+    </groups>
+    <memorydebugger>
+        <suppression>
+            <frame>0</frame>
+            <position>
+                <function>unaligned_bigint</function>
+            </position>
+        </suppression>
+    </memorydebugger>
+    <sources recursive="yes" auto-internal="yes">
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/lib/gcc</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include/c++/4.7.2/x86_64-unknown-linux-gnu/bits</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/lib</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/kokkos-lib-openmp/include/impl</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include/c++/4.7.2/debug</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/lib/gcc/x86_64-unknown-linux-gnu</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/kokkos-lib-openmp</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/kokkos-lib-openmp/include</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/kokkos-lib-openmp/include/Threads</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/lib/gcc/x86_64-unknown-linux-gnu/4.7.2</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include/c++</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/lib/gcc/x86_64-unknown-linux-gnu/4.7.2/include</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include/c++/4.7.2/ext</internal>
+        <internal>/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d/src</internal>
+        <internal>/work/04161/hoss3in/lonestar/workspace</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include/c++/4.7.2/bits</internal>
+        <internal>/work/04161/hoss3in/lonestar/workspace/kokkos-xtfem3d</internal>
+        <internal>/work/04161/hoss3in/lonestar</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include/c++/4.7.2/x86_64-unknown-linux-gnu</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs</internal>
+        <internal>/work/04161/hoss3in/lonestar/libs/libgcc/include/c++/4.7.2</internal>
+    </sources>
+    <threads>
+        <viewmode>AutomaticView</viewmode>
+    </threads>
+    <visitpicks/>
+</session>
