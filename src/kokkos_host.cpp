@@ -16,7 +16,7 @@ typedef view_1D_double::HostMirror host_view_1D_double;
 
 extern "C" /* IMPORTANT! */
 
-void kokkos_host_(int ne, int nn, int ndofn, int nnse, int nnte,
+void kokkos_host_(int rank, int ne, int nn, int ndofn, int nnse, int nnte,
     int ngpe, int ncmp, int nip, int *nodes, double *Nx, double *Ny,   
     double *Nz, double *Nt, double *sol,double *eps_old, double *eps_pl, 
     double *sig_eff, double *sig_back, double *p, double *D, double *ws,  
@@ -94,6 +94,7 @@ void kokkos_host_(int ne, int nn, int ndofn, int nnse, int nnte,
     for (int i=0; i<size_p; i++) {
         h_sig_d(i) = sig_d[i];
         h_del_po(i) = del_po[i];
+	//printf("del_po( %i ) = %f\n",i,del_po[i]);
         h_p(i) = p[i];
         h_D(i) = D[i];
         h_ws(i) = ws[i];
@@ -115,6 +116,11 @@ void kokkos_host_(int ne, int nn, int ndofn, int nnse, int nnte,
     Kokkos::deep_copy (d_p, h_p);
     Kokkos::deep_copy (d_D, h_D);
     Kokkos::deep_copy (d_ws, h_ws);
+    /*if (rank==0) {
+	for (int i=0; i<size_sol; i++) {
+		if (sol[i] > 0.000001) printf("sol[%i] = %e\n",i, sol[i]);
+	}
+    }*/
 /*------------------------------------------------------------------------------
             Invoke kokkos kernel
 ------------------------------------------------------------------------------*/
@@ -126,7 +132,7 @@ void kokkos_host_(int ne, int nn, int ndofn, int nnse, int nnte,
     int League = (ngpe*ne+threadsPerTeam-1)/threadsPerTeam;
     /* Launch "League" number of teams of the maximum number of threads per team */
     const team_policy policy( League , threadsPerTeam );
-    Kokkos::parallel_for(ngpe*ne, Kokkos_Kernel(ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip, d_nodes, d_Nx, d_Ny, d_Nz, d_Nt, d_sol, d_eps_old, d_eps_pl, d_sig_eff, d_sig_back, d_p, d_D, d_ws, d_del_po, d_sig_d) );
+    Kokkos::parallel_for(ngpe*ne, Kokkos_Kernel(rank, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip, d_nodes, d_Nx, d_Ny, d_Nz, d_Nt, d_sol, d_eps_old, d_eps_pl, d_sig_eff, d_sig_back, d_p, d_D, d_ws, d_del_po, d_sig_d) );
 /*------------------------------------------------------------------------------
     Copy data from device and cleanup memory
 ------------------------------------------------------------------------------*/
@@ -154,5 +160,6 @@ void kokkos_host_(int ne, int nn, int ndofn, int nnse, int nnte,
         p[i] = h_p(i);
         D[i] = h_D(i);
         ws[i] = h_ws(i);
+	//std::cout<<"ws[ "<<i<<" ] = "<<ws[i]<<endl;
     }
 }

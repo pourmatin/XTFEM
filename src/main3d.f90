@@ -137,9 +137,9 @@ nnse    = nnsd**ndofn   ! Number of nodes per spatial element
 ngpe    = nquads**ndofn ! Number of Gauss points per spatial element
 ! Time step
 dt0     = 0.05_REKIND   ! Step time
-nstep   = 2            ! Number of steps
+nstep   = 30000            ! Number of steps
 n1      = 100           ! Initial time step (cycle)
-n2      = 2            ! Time step after crack initiation (cycle)
+n2      = 5            ! Time step after crack initiation (cycle)
 nipc    = 256           ! Number of temporal interpolation points per cycle
 ! Applid load
 p0      = 70.0_REKIND   ! Pressure amplitude (Traction load)
@@ -152,7 +152,7 @@ eps     = 1.d-8         ! GMRES: tolerance for stopping criterion
 maxits  = 50            ! GMRES: maximum number of iterations allowed 
 iout    = 40            ! GMRES: solution info output file number
 ! Post-processing
-nout    = 10             ! Output frequency
+nout    = 100             ! Output frequency
 
 IF (MPI_ID .EQ. ROOT) THEN
 !-------------------------------------------------------------------------------
@@ -320,6 +320,7 @@ mnz = knz
 ALLOCATE(Nx(nnse, mpi_ngp), Ny(nnse, mpi_ngp), Nz(nnse, mpi_ngp), &
     & kit(MAX(knz,ndof+1)), kjt(knz), kvt(knz), mit(MAX(mnz,ndof+1)), &
     & mjt(mnz), mvt(mnz))
+!CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
  CALL mpiglbmtx(mpi_ne, mpi_ele, ne, nn, ndofn, nnse, nquads, ngpe, ncmp, &
     & xconn, xcoord, ym, nu, rho, wqs, ns, dns, dnxyz, sd, stiff, Nx, Ny, &
     & Nz, kit(1:knz), kjt, kvt, knz, mit(1:mnz), mjt, mvt, mnz)
@@ -376,6 +377,7 @@ DO ii = 1, nn
 ENDDO
 fixedbcst0 = fixedbcst
 ! Apply BC to K and M matrices
+!CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
 CALL csrapplybc(ki, kj, kv, ndof, knz, fixedbcst(1:ndof))
 CALL csrapplybc(mi, mj, mv, ndof, mnz, fixedbcst(1:ndof))
 !temp = 'stiff_bc'//trim(char(mpi_id+49))
@@ -399,6 +401,7 @@ DO ii = 1, nn
 ENDDO
 ftotal = p0*area
 fnode = ftotal/ntele
+rext = 0._REKIND
 DO ii = 1, ne
     DO jj = 1, nnse
         kk = xconn(ii,jj)
@@ -536,7 +539,7 @@ ENDIF
 ! MUMPS: analysis, JOB = 1
 !-------------------------------------------------------------------------------
 mumps_par%JOB = 1
-!CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
+CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
 CALL DMUMPS(mumps_par)
 IF (mumps_par%INFOG(1).LT.0) THEN
     WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
@@ -551,7 +554,7 @@ ENDIF
 ! MUMPS: factorize, JOB = 2
 !-------------------------------------------------------------------------------
 mumps_par%JOB = 2
-!CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
+CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
 CALL DMUMPS(mumps_par)
 IF (mumps_par%INFOG(1).LT.0) THEN
     WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
@@ -758,6 +761,11 @@ DO ii = 1, nstep ! Loop over space time slabs
         CALL CPU_TIME(tcpu(6,2))
         !$ tusr(6,2) = omp_get_wtime()
     ENDIF
+    !CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
+    !IF (MPI_IERR .NE. 0) THEN
+    !    PRINT *, 'MPI_Barrier error = ',  MPI_IERR
+    !    GOTO 1500
+    !ENDIF
     ! Temporal nodal coordinates of iith S-T slab
     DO jj = 1, nnte
         tcoorde(jj) = tcoorde(nnte) + (jj-1)*dt/(nnte-1)
@@ -784,7 +792,7 @@ DO ii = 1, nstep ! Loop over space time slabs
     CALL stcoeff(ii, dt, angvel, ck, cm, cktn, cmtn, cktn1, cmtn1)
     ! Use KRONSPGEMV perform spgemv
     CALL mpikronspgemv(cktn1, cmtn1, 1._REKIND, 1._REKIND, 2*nnte, ki, kj, &
-        & kv, mi, mj, mv, ndof, dispst, fextst)  
+        & kv, mi, mj, mv, ndof, dispst, fextst)
     !PRINT *, 'ID = ', MPI_ID, 'sum(fextst) = ', sum(dabs(fextst))
     DO jj = 1, ndofst
         IF (fixedbcst(jj) .NE. 0) fextst(jj) = 0._REKIND 
@@ -795,6 +803,12 @@ DO ii = 1, nstep ! Loop over space time slabs
         CALL CPU_TIME(tcpu(4,1))
         !$ tusr(4,1) = omp_get_wtime()
     ENDIF
+    !CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
+    !IF (MPI_IERR .NE. 0) THEN
+    !    PRINT *, 'MPI_Barrier error = ',  MPI_IERR
+    !    GOTO 1500
+    !ENDIF
+
     CALL mpipgmres(ck+cktn, cm+cmtn, 2*nnte, ki, kj, kv, mi, mj, mv, ndof, &
         &  mumps_par, fextst, dispst, im, eps, maxits, iout, ierr)
     IF (MPI_ID .EQ. ROOT) THEN
@@ -813,6 +827,12 @@ DO ii = 1, nstep ! Loop over space time slabs
         !temp = 'dispst'
         !CALL outputrealvec(dispst, ndofst, temp)
     ENDIF
+    CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
+    IF (MPI_IERR .NE. 0) THEN
+        PRINT *, 'MPI_Barrier error = ',  MPI_IERR
+        GOTO 1500
+    ENDIF
+    
     CALL MPI_BCAST(dispst, ndofst, MPI_REAL8, ROOT, MPI_COMM_WORLD, MPI_IERR)
     IF (MPI_IERR .NE. 0) THEN
         PRINT *, 'MPI_BCAST error = ',  MPI_IERR
@@ -824,10 +844,17 @@ DO ii = 1, nstep ! Loop over space time slabs
         !$ tusr(5,1) = omp_get_wtime()
         WRITE(iout2,*) 'Solve damage ... start, step = ', ii
     ENDIF
-    CALL kokkos_damage(job, mpi_ne, nn, ndofn, nnse, nnte, ngpe, &
+    CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
+    CALL kokkos_damage(MPI_ID, job, mpi_ne, nn, ndofn, nnse, nnte, ngpe, &
             & ncmp, nip, xconn(mpi_ele,:), Nx, Ny, Nz, ym, nu, angvel, &
             & tcoorde, dispst, gpsta, strain_tgo, strain_pl, sig_eff, &
             & sig_back, p, D, ws, del_po, sig_D)
+    
+    CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
+    IF (MPI_IERR .NE. 0) THEN
+        PRINT *, 'MPI_Barrier error = ',  MPI_IERR
+        GOTO 1500
+    ENDIF
     !PRINT *, 'ID = ', MPI_ID, 'max(D) = ', maxval(D)
     dmax = 0._REKIND
     wsmax = 0._REKIND
@@ -875,6 +902,12 @@ DO ii = 1, nstep ! Loop over space time slabs
         ENDIF
         WRITE(*,115) ii, tcoorde(nnte), tusr(4:7,3), wsmax, dmax
     ENDIF
+
+    !CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
+    !IF (MPI_IERR .NE. 0) THEN
+    !    PRINT *, 'MPI_Barrier error = ',  MPI_IERR
+    !    GOTO 1500
+    !ENDIF
 ENDDO
 ! Clear memory and exit
 DEALLOCATE(xcoord, xconn, dispst, fextst, tcoorde, dns, wqs)

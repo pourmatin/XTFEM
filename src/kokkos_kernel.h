@@ -22,7 +22,7 @@ typedef Kokkos::View<double*> view_1D_double;
 
 class Kokkos_Kernel {
     
-    int ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip;
+    int rank, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip;
     view_1D_int nodes;
     view_1D_double Nx, Ny, Nz, Nt, sol, eps_old, eps_pl, sig_eff, sig_back, p, d, ws, del_po, sig_d;
     
@@ -32,8 +32,8 @@ class Kokkos_Kernel {
     void caldamage( int, view_1D_double ) const;
     
 public:
-    Kokkos_Kernel(int _ne, int _nn, int _ndofn, int _nnse, int _nnte, int _ngpe, int _ncmp, int _nip, view_1D_int _nodes, view_1D_double _Nx, view_1D_double _Ny, view_1D_double _Nz,     view_1D_double _Nt, view_1D_double _sol, view_1D_double _eps_old, view_1D_double _eps_pl,view_1D_double _sig_eff, view_1D_double _sig_back, view_1D_double _p, view_1D_double _d, view_1D_double _ws, view_1D_double _del_po, view_1D_double _sig_d):
-    ne(_ne), nn(_nn), ndofn(_ndofn), nnse(_nnse), nnte(_nnte), ngpe(_ngpe), ncmp(_ncmp), nip(_nip),
+    Kokkos_Kernel(int _rank, int _ne, int _nn, int _ndofn, int _nnse, int _nnte, int _ngpe, int _ncmp, int _nip, view_1D_int _nodes, view_1D_double _Nx, view_1D_double _Ny, view_1D_double _Nz,     view_1D_double _Nt, view_1D_double _sol, view_1D_double _eps_old, view_1D_double _eps_pl,view_1D_double _sig_eff, view_1D_double _sig_back, view_1D_double _p, view_1D_double _d, view_1D_double _ws, view_1D_double _del_po, view_1D_double _sig_d):
+    rank(_rank), ne(_ne), nn(_nn), ndofn(_ndofn), nnse(_nnse), nnte(_nnte), ngpe(_ngpe), ncmp(_ncmp), nip(_nip),
     nodes(_nodes), Nx(_Nx), Ny(_Ny), Nz(_Nz), Nt(_Nt), sol(_sol), eps_old(_eps_old),
     eps_pl(_eps_pl), sig_eff(_sig_eff), sig_back(_sig_back), p(_p), d(_d), ws(_ws), del_po(_del_po),
     sig_d(_sig_d) {};
@@ -41,7 +41,7 @@ public:
     KOKKOS_INLINE_FUNCTION
     void operator() ( const int ii/*team_member & thread*/ ) const {
         //int ii = thread.league_rank() * thread.team_size() + thread.team_rank();
-        if (ii < ngpe*ne)
+	if (ii < ngpe*ne)
         {
             /* loop over temporal interpolation points */
             for (int jj = 0; jj < nip; jj++)
@@ -58,7 +58,7 @@ public:
                         {
                             int dofid = k*nn*ndofn + ndid*ndofn + j;
                             disp[i*ndofn+j] += Nt(jj*2*nnte+k)*sol(dofid);
-                        }
+			}
                     }
                 }
                 
@@ -222,7 +222,8 @@ public:
                     double tr_sigs = -tr_Qs;
                     del_p = (Qs_eq - sig_f)/gamma;
                     p(ii) += del_p;
-                    double dev_sigs[6] = {0.0};
+			//printf("node = %i, jj= %i, p(%i) = %f\n",nodes(ii*nnse),jj,ii,p(ii));  
+		    double dev_sigs[6] = {0.0};
                     double c5 = 1.0 + gamma*del_p/sig_f;
                     for (int i = 0; i < 6; i++)
                     {
@@ -279,7 +280,9 @@ public:
                     double sig_old = fabs(sig_d(ii) - sig_f);
                     /* Note: int abs(int n), double fabs(double x) */
                     ws(ii) += (sig_new*del_p + sig_old*del_po(ii))/2.0;
-                    if (ws(ii) >= wd)
+		    
+                   // printf("jj= %i, del_po( %i ) = %f\n",jj, ii,del_po(ii));
+		    if (ws(ii) >= wd)
                     {
                         double sig_eff_p[3] = {0.0};
                         double sig_eff_n[3] = {0.0};

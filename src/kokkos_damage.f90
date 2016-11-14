@@ -1,11 +1,11 @@
-SUBROUTINE kokkos_damage(jobname, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, &
+SUBROUTINE kokkos_damage(rank, jobname, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, &
     & nip, xconn, Nx, Ny, Nz, ym, nu, w, tcoorde, sol, gpsta, eps_old, &
     & eps_pl, sig_eff, sig_back, p, D, ws, del_po, sig_d)
 USE kinds
 IMPLICIT NONE
 ! ---External variables---
 CHARACTER(LEN=80), INTENT(IN) :: jobname
-INTEGER, INTENT(IN) :: ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip
+INTEGER, INTENT(IN) :: rank, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip
 INTEGER, DIMENSION(ne, nnse), INTENT(IN) :: xconn
 REAL(KIND=REKIND), DIMENSION(nnse, ngpe*ne), INTENT(IN) :: Nx, Ny, Nz
 REAL(KIND=REKIND), INTENT(IN) :: ym, nu, w
@@ -82,7 +82,7 @@ DO i = 1, ngp
     ENDDO
 ENDDO
 !--- Call KOKKOS host -------------------------------------------------------------
-CALL kokkos_host(%VAL(ne), %VAL(nn), %VAL(ndofn), %VAL(nnse), &
+CALL kokkos_host(%VAL(rank), %VAL(ne), %VAL(nn), %VAL(ndofn), %VAL(nnse), &
     & %VAL(nnte), %VAL(ngpe), %VAL(ncmp), %VAL(nip), gpu_nodes, gpu_Nx, &
     & gpu_Ny, gpu_Nz, gpu_Nt, sol, gpu_eps_old, gpu_eps_pl, gpu_sig_eff, &
     & gpu_sig_back, p, D, ws, del_po, sig_d)
