@@ -63,7 +63,7 @@ SCADIR = $(LIBDIR)/scalapack-2.0.2
 BLASDIR = $(LIBDIR)/BLAS-3.6.0
 LAPDIR = $(LIBDIR)/lapack-3.6.1
 MPIDIR = /opt/apps/gcc4_9/mvapich2/2.1/lib
-FEMDIR = $(WORKDIR)/kokkos-xtfem3d
+FEMDIR = $(WORKDIR)/XTFEM
 SRCDIR = $(FEMDIR)/src
 MESHDIR = $(FEMDIR)/inp
 BACKUPDIR = $(FEMDIR)/backup
@@ -80,15 +80,20 @@ OOCDIR = $(TEMPDIR)/ooc
 # MESHFILE = sent_c3d8_48516_45100.inp
 # MESHFILE = sent_c3d8_133671_126650.inp
 # MESHFILE = sent_c3d8_948693_924600.inp
-# MESHFILE = panel_4424_2144.inp
+ MESHFILE = panel_4424_2144.inp
 # MESHFILE = panel_7634_3749.inp
 # MESHFILE = panel_29286_14513.inp
- MESHFILE = panel_38318_18903.inp
+# MESHFILE = panel_38318_18903.inp
 # MESHFILE = panel_171015_113490.inp
 # MESHFILE = panel_230685_152766.inp
 # MESHFILE = panel_519324_343684.inp
 # MESHFILE = panel_1689895_1346820.inp
-
+# MESHFILE = panel98114_47923.inp
+#MESHFILE = rod6171_5000.inp
+#MESHFILE = rod4851_4000.inp
+#MESHFILE = rod525_320.inp
+#MESHFILE = rod99_40.inp
+#MESHFILE = rod1.inp
 MESHINP = sent.inp
 
 # file operations
@@ -235,7 +240,7 @@ OBJS += debug.o
 # MUMPS-based solver
 OBJS += ilut.f kronecker.o kronecker_mumps.o
 # MPI
-OBJS += mpisubs.f90
+OBJS += mpisubs.o
 # post-process and damage
 OBJS += postprocess.o kokkos_damage.o kokkos_host.o initialize_kokkos.o
 # element deletion
@@ -284,7 +289,7 @@ archive_rst:
 	$(MV) $(TEMPDIR)/$(BACKUPFILERST) $(BACKUPDIR)/$(BACKUPFILERST)
 
 cleantemp:
-	cd $(TEMPDIR) && $(RM) $(VERYCLEAN)
+	cd $(TEMPDIR) && $(RM) $(VERYCLEAN) *.cuda *.host
       
 buildtemp: cleantemp
 	$(CP) $(PROG) $(TEMPDIR)

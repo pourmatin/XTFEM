@@ -60,27 +60,22 @@ RETURN
 END SUBROUTINE mpisetgp
 
 
-SUBROUTINE mpiglbmtx(mpi_ne, ele, ne, nn, ndofn, nnse, nquads, ngpe, ncmp, &
-    & xconn, xcoord, ym, nu, rho, wqs, ns, dns, dnxyz, sd, stiff, Nx, Ny, &
-    & Nz, ki, kj, kv, knz, mi, mj, mv, mnz)
+SUBROUTINE mpiglbmtx(mpi_ne, ele, ne, nn, ndofn, nnse, nquads, ngpe, &
+    & xconn, xcoord, kappa, cp, rho, wqs, ns, dns, ki, kj, kv, knz, mi, mj, mv, mnz)
 ! Assembly global matrices
 USE kinds
 USE procs
 !! Variable declaration
 IMPLICIT NONE
 ! ---External variables--- 
-INTEGER, INTENT(IN) :: mpi_ne, ne, nn, ndofn, nnse, nquads, ngpe, ncmp
+INTEGER, INTENT(IN) :: mpi_ne, ne, nn, ndofn, nnse, nquads, ngpe
 INTEGER, DIMENSION(mpi_ne), INTENT(IN) :: ele
 INTEGER, DIMENSION(ne, nnse), INTENT(IN) :: xconn
-REAL(KIND=REKIND), DIMENSION(nn, ndofn), INTENT(IN) :: xcoord
-REAL(KIND=REKIND), INTENT(IN) :: ym, nu, rho
+REAL(KIND=REKIND), DIMENSION(nn, 3), INTENT(IN) :: xcoord
+REAL(KIND=REKIND), INTENT(IN) :: kappa, cp, rho
 REAL(KIND=REKIND), DIMENSION(nquads), INTENT(IN) :: wqs
 REAL(KIND=REKIND), DIMENSION(ndofn*ngpe, ndofn*nnse), INTENT(IN) :: ns
 REAL(KIND=REKIND), DIMENSION(ndofn*ngpe, nnse), INTENT(IN) :: dns
-REAL(KIND=REKIND), DIMENSION(ndofn**2*ngpe, ndofn*nnse), INTENT(IN) :: dnxyz
-REAL(KIND=REKIND), DIMENSION(6,9), INTENT(OUT) :: sd
-REAL(KIND=REKIND), DIMENSION(6,6), INTENT(OUT) :: stiff
-REAL(KIND=REKIND), DIMENSION(nnse, ngpe*ne), INTENT(OUT) :: Nx, Ny, Nz
 INTEGER, INTENT(IN) :: knz
 REAL(KIND=REKIND), DIMENSION(knz), INTENT(OUT) :: kv
 INTEGER, DIMENSION(knz), INTENT(OUT) :: ki, kj
@@ -88,25 +83,33 @@ INTEGER, INTENT(IN) :: mnz
 INTEGER, DIMENSION(mnz), INTENT(OUT) :: mi, mj
 REAL(KIND=REKIND), DIMENSION(mnz), INTENT(OUT) :: mv
 ! ---Internal variables---
-INTEGER :: i, j, noel, ndofe
+INTEGER :: i, j, k, noel, ndofe
 INTEGER, DIMENSION(nnse) :: nodes
 INTEGER, DIMENSION(nnse*ndofn) :: dofs
-REAL(KIND=REKIND), DIMENSION(nnse, ndofn) :: ncoorde
+REAL(KIND=REKIND), DIMENSION(nnse, 3) :: ncoorde
 REAL(KIND=REKIND), DIMENSION(nnse*ndofn, nnse*ndofn) :: ke, me
 ndofe = (nnse*ndofn)**2
-CALL setsdstiff(ym, nu, sd, stiff)
+!CALL setsdstiff(kappa, cp, sd, stiff)
 DO i = 1, mpi_ne
     noel = ele(i)
     nodes = xconn(noel,:)
     ncoorde = xcoord(nodes,:)
     DO j = 1, nnse
-        dofs(j*3-2) = nodes(j)*3 - 2
-        dofs(j*3-1) = nodes(j)*3 - 1
-        dofs(j*3-0) = nodes(j)*3 - 0
+        DO k = 0, ndofn-1
+            dofs(j*ndofn-k) = nodes(j)*ndofn - k
+        ENDDO
     ENDDO
-    CALL elemtx(ndofn, nnse, nquads, ngpe, ncmp, ncoorde, rho, sd, stiff, &
-        & wqs, ns, dns, dnxyz, Nx(:, (i-1)*ngpe+1:i*ngpe), &
-        & Ny(:, (i-1)*ngpe+1:i*ngpe), Nz(:, (i-1)*ngpe+1:i*ngpe), ke, me)
+    CALL elemtx(ndofn, nnse, nquads, ngpe, ncoorde, rho, kappa, cp, &
+        & wqs, ns, dns, ke, me)
+!print *, 'ke:'
+!    do, j=1,8
+!        write(*,'(100g15.5)') ( ke(j,k), k=1,8 )
+!    enddo
+!print *, 'me:'
+!    do, j=1,8
+!        write(*,'(100g15.5)') ( me(j,k), k=1,8 )
+!    enddo
+!print *, "i= ",i
     CALL assembly(ki((i-1)*ndofe+1:i*ndofe), kj((i-1)*ndofe+1:i*ndofe), & 
         & kv((i-1)*ndofe+1:i*ndofe), ke, dofs, nnse, ndofn)
     CALL assembly(mi((i-1)*ndofe+1:i*ndofe), mj((i-1)*ndofe+1:i*ndofe), &

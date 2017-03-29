@@ -1296,7 +1296,7 @@ END SUBROUTINE shape2dxx
 
 !---------------------------------------------------------------
 
-SUBROUTINE shape3x(nout, x, y, z, n)
+SUBROUTINE shapex(ns, x, y, z, n)
 !
 ! Calculates array containing the full Lagrangian shape function (nout) at 
 ! coordinate (x,y,z) of order n. This subroutine is limited to 8-node and 
@@ -1304,8 +1304,8 @@ SUBROUTINE shape3x(nout, x, y, z, n)
 !
 !      Date      Programmer   Description
 !  ------------ ------------ -----------------------------------
-!   09/18/2015   Rui Zhang     Original Code
-!
+!   09/18/2015   Rui Zhang                  Original Code
+!   03/01/2017   Hossein Pourmatin      Modified
 
 IMPLICIT NONE
 
@@ -1313,9 +1313,7 @@ INTEGER, INTENT(IN) :: n  ! Order shape function
 REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate
 REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate
 REAL(kind=REKIND), INTENT(IN) :: z  ! Z-coordinate
-REAL(kind=REKIND), DIMENSION(n**3) :: ns ! Shape function array of order n at point (x,y,z)
-REAL(kind=REKIND), INTENT(OUT), DIMENSION(3,3*(n**3)) :: nout ! 3D Shape functions
-INTEGER :: ii, jj ! Counter
+REAL(kind=REKIND), INTENT(OUT), DIMENSION(n**3) :: ns ! Shape function array of order n at point (x,y,z)
 
 order: IF ( n == 2 ) THEN ! 8-node brick element
      ns(1) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND-y)*(1._REKIND+z) ! N1
@@ -1329,20 +1327,12 @@ order: IF ( n == 2 ) THEN ! 8-node brick element
 ELSE IF ( n == 3 ) THEN order ! Order 3
 
 END IF order ! End Conditional
-nout = 0._REKIND
-jj = 0
-nodel: DO ii = 1, n ** 3 ! Loop over spatial nodes
-     jj = jj + 3
-     nout(1, jj-2) = ns(ii) ! x-direction shape functions
-     nout(2, jj-1) = ns(ii) ! y-direction shape functions
-     nout(3, jj)   = ns(ii) ! z-direction shape functions
-END DO nodel ! End loop over spatial nodes
 
-END SUBROUTINE shape3x
+END SUBROUTINE shapex
 
 !---------------------------------------------------------------
 
-SUBROUTINE shape3dx(dns, dnxyz, x, y, z, n)
+SUBROUTINE shapedx(dns, x, y, z, n)
 !
 ! Calculates array containing the first derivatives of the full Lagrangian 
 ! shape function (dns and dnxyz) at coordinate (x,y,z) of order n. This 
@@ -1351,8 +1341,8 @@ SUBROUTINE shape3dx(dns, dnxyz, x, y, z, n)
 !
 !      Date      Programmer   Description
 !  ------------ ------------ -----------------------------------
-!   09/18/2015   Rui Zhang     Original Code
-!
+!   09/18/2015   Rui Zhang                  Original Code
+!   03/01/2017   Hossein Pourmatin      Modified
 
 IMPLICIT NONE
 
@@ -1361,58 +1351,37 @@ INTEGER, INTENT(IN) :: n  ! Order shape function
 REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate
 REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate
 REAL(kind=REKIND), INTENT(IN) :: z  ! Z-coordinate
-REAL(kind=REKIND), INTENT(OUT), DIMENSION(3,n**3) :: dns ! 3D Shape functions
-REAL(kind=REKIND), INTENT(OUT), DIMENSION(9,3*(n**3)) :: dnxyz ! 3D Shape functions
+REAL(kind=REKIND), INTENT(OUT), DIMENSION(n**3, 3) :: dns ! 3D Shape functions
 order: IF ( n == 2 ) THEN ! 8-node brick element
      dns(1, 1) = -0.125_REKIND*(1._REKIND-y)*(1._REKIND+z) ! dN1dx
-     dns(1, 2) = -0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN2dx
-     dns(1, 3) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN3dx
-     dns(1, 4) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN4dx
-     dns(1, 5) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND+z) ! dN5dx
-     dns(1, 6) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN6dx
-     dns(1, 7) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN7dx
-     dns(1, 8) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN8dx
-     dns(2, 1) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN1dy
+     dns(2, 1) = -0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN2dx
+     dns(3, 1) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN3dx
+     dns(4, 1) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN4dx
+     dns(5, 1) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND+z) ! dN5dx
+     dns(6, 1) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN6dx
+     dns(7, 1) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN7dx
+     dns(8, 1) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN8dx
+     dns(1, 2) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN1dy
      dns(2, 2) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND-z) ! dN2dy
-     dns(2, 3) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-z) ! dN3dy
-     dns(2, 4) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN4dy
-     dns(2, 5) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN5dy
-     dns(2, 6) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN6dy
-     dns(2, 7) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN7dy
-     dns(2, 8) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN8dy
-     dns(3, 1) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN1dz
-     dns(3, 2) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN2dz
+     dns(3, 2) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-z) ! dN3dy
+     dns(4, 2) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN4dy
+     dns(5, 2) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN5dy
+     dns(6, 2) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN6dy
+     dns(7, 2) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN7dy
+     dns(8, 2) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN8dy
+     dns(1, 3) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN1dz
+     dns(2, 3) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN2dz
      dns(3, 3) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND+y) ! dN3dz
-     dns(3, 4) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+y) ! dN4dz
-     dns(3, 5) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN5dz
-     dns(3, 6) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN6dz
-     dns(3, 7) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN7dz
-     dns(3, 8) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN8dz
+     dns(4, 3) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+y) ! dN4dz
+     dns(5, 3) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN5dz
+     dns(6, 3) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN6dz
+     dns(7, 3) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN7dz
+     dns(8, 3) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN8dz
 ELSE IF ( n == 3 ) THEN order ! 20-node brick element
      
 END IF order ! End conditional
 
-! Initialize x/y direction shape functions
-dnxyz = 0._REKIND
-jj = 0
-kk = -1
-ll = -2
-nodel: DO ii = 1, n ** 3 ! Loop over nodes
-     jj = jj + 3
-     kk = kk + 3
-     ll = ll + 3
-     dnxyz(1, ll) = dns(1, ii)
-     dnxyz(2, ll) = dns(2, ii)
-     dnxyz(3, ll) = dns(3, ii)
-     dnxyz(4, kk) = dns(1, ii)
-     dnxyz(5, kk) = dns(2, ii)
-     dnxyz(6, kk) = dns(3, ii)
-     dnxyz(7, jj) = dns(1, ii)
-     dnxyz(8, jj) = dns(2, ii)
-     dnxyz(9, jj) = dns(3, ii)
-END DO nodel ! End loop over nodes
-
-END SUBROUTINE shape3dx
+END SUBROUTINE shapedx
 
 !---------------------------------------------------------------
 

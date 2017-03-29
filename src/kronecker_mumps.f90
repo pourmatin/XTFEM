@@ -98,14 +98,15 @@ SUBROUTINE mpikronspgemv(a, b, alpha, beta, q, ki, kj, kv, mi, mj, mv, p, x, y)
 !     y      REAL       p*q         Output vector
 
 !! Variable declaration
+USE kinds
 IMPLICIT NONE
 ! ---External variables---
 INTEGER, INTENT(IN) :: p, q
 INTEGER, INTENT(IN) :: ki(*), mi(*), kj(*), mj(*)
-REAL(KIND=8), INTENT(IN) :: kv(*), mv(*), alpha, beta
-REAL(KIND=8), DIMENSION(q,q), INTENT(IN) :: a, b
-REAL(KIND=8), DIMENSION(p*q), INTENT(INOUT) :: x
-REAL(KIND=8), DIMENSION(p*q), INTENT(INOUT) :: y
+REAL(KIND=REKIND), INTENT(IN) :: kv(*), mv(*), alpha, beta
+REAL(KIND=REKIND), DIMENSION(q,q), INTENT(IN) :: a, b
+REAL(KIND=REKIND), DIMENSION(p*q), INTENT(INOUT) :: x
+REAL(KIND=REKIND), DIMENSION(p*q), INTENT(INOUT) :: y
 ! ---Internal variables---
 REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: z
 ALLOCATE(z(p*q))
@@ -115,7 +116,6 @@ y = alpha*z + beta*y
 DEALLOCATE(z)
 RETURN
 END SUBROUTINE mpikronspgemv
-
 
 SUBROUTINE mpilusol(a, p, q, mumps_par, x, y)
 ! Solve (A*LU)y = x for y, note that * is Kronecker product 
