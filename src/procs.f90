@@ -679,623 +679,6 @@ END SUBROUTINE gaussquadrature
 
 !---------------------------------------------------------------
 
-SUBROUTINE shape1x(ns, x, n)
-!
-! Calculate array containing the full Lagrangian shape function (shapefunc) at point x of order n.
-!
-!      Date      Programmer   Description
-!  ------------ ------------ -----------------------------------
-!   05/15/2009     D.N.A.     Original Code
-!   07/07/2009     D.N.A.     Added KIND parameters
-!   01/17/2011     D.N.A.     Added higher orders and fixed order 5 elements 2&3
-!
-
-IMPLICIT NONE
-
-INTEGER, INTENT(IN) :: n  ! Order shape function
-REAL(kind=REKIND), INTENT(IN) :: x  ! Point to evaluate shape function at
-REAL(kind=REKIND), DIMENSION(n), INTENT(OUT) :: ns ! Shape function array of order n at point x
-INTEGER :: ii, jj
-REAL(kind=REKIND), DIMENSION(n) :: iso
-
-order: IF ( n == 2 ) THEN ! Order 2
-     ns = [0.5_REKIND - 0.5_REKIND * x, 0.5_REKIND + 0.5_REKIND * x ] ! [ N1 N2 ]
-ELSE IF ( n == 3 ) THEN order ! Order 3
-     ns = [ 0.5_REKIND * (-x + x**2), 1._REKIND - x**2, 0.5_REKIND * (x + x**2) ] ! [N1 N2 N3]
-ELSE IF ( n == 4 ) THEN order ! Order 4
-     ns( 1 ) = 0.0625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) ! N1
-     ns( 2 ) = 0.5625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) ! N2
-     ns( 3 ) = 0.5625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) ! N3
-     ns( 4 ) = 0.0625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) ! N4
-ELSE IF ( n == 5 ) THEN order ! Order 5
-     ns(1) = (x - x ** 2 - 4._REKIND * x ** 3 + 4._REKIND * x ** 4 ) / 6._REKIND ! N1
-     ns(2) = 4._REKIND * ( -x + 2._REKIND * x ** 2 + x ** 3 - 2._REKIND * x ** 4 ) / 3._REKIND ! N2
-     ns(3) = 1._REKIND - 5._REKIND * x ** 2 + 4._REKIND * x ** 4 ! N3
-     ns(4) = 4._REKIND * ( x + 2._REKIND * x ** 2 - x ** 3 - 2._REKIND * x ** 4 ) / 3._REKIND ! N4
-     ns(5) = (-x - x ** 2 + 4._REKIND * x ** 3 + 4._REKIND * x ** 4 ) / 6._REKIND ! N5
-ELSE IF ( n > 5 ) THEN order ! Order > 5
-     iso(1) = -1._REKIND - 2._REKIND / REAL(n-1, REKIND)
-     DO ii = 2, n ! Loop over nodes
-          iso(ii) = iso(ii-1) + 2._REKIND / REAL(n-1, REKIND) ! Isoparametric nodal coordinate, dimensionless
-     END DO ! End loop over nodes
-     ns = 1._REKIND ! Initialize N
-     DO ii = 1, n ! Loop over nodes
-          DO jj = 1, n ! Loop over nodes
-               IF( jj /= ii) THEN ! Check if denominator is 0
-                    ns(ii) = ns(ii) * (iso(jj) - x) / (iso(jj) - iso(ii)) ! N
-               END IF ! End check if denominator is 0
-          END DO ! End loop over nodes
-     END DO ! End loop over nodes
-END IF order ! End conditional
-END SUBROUTINE shape1x
-
-!---------------------------------------------------------------
-
-SUBROUTINE shape1dx(dndx, x, n)
-!
-! Calculate array containing the first derivative of the full Lagrangian shape function (dndx) at x of order n
-!
-!      Date      Programmer   Description
-!  ------------ ------------ -----------------------------------
-!   05/02/2009     D.N.A.     Original Code
-!   07/07/2009     D.N.A.     Added KIND parameters
-!   01/17/2011     D.N.A.     Added higher orders and fixed order 5 elements 2&3
-!
-
-IMPLICIT NONE
-
-INTEGER, INTENT(IN) :: n  ! Order shape function
-REAL(kind=REKIND), INTENT(IN) :: x ! Point to evaluate shape function derivative at
-REAL(kind=REKIND), DIMENSION(n), INTENT(OUT) :: dndx ! Shape function derivative array of order n at point x
-INTEGER :: ii, jj
-REAL(kind=REKIND) :: eps
-REAL(kind=REKIND), DIMENSION(n) :: iso, dndxm
-
-IF ( n == 2 ) THEN ! Order 2
-     dndx = [-0.5_REKIND, 0.5_REKIND ] ! [ dN1/dx dN2/x ]
-ELSE IF ( n == 3 ) THEN ! Order 3
-     dndx = [ -0.5_REKIND + x, -x - x, 0.5_REKIND + x ] ! [ dN1/dx dN2/dx dN3/dx ]
-ELSE IF ( n == 4 ) THEN ! Order 4
-     dndx( 1 ) = 0.0625_REKIND * (  1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) ! dN1/dx
-     dndx( 2 ) = 0.5625_REKIND * ( -3._REKIND -  2._REKIND * x +  9._REKIND * x ** 2 ) ! dN2/dx
-     dndx( 3 ) = 0.5625_REKIND * (  3._REKIND -  2._REKIND * x -  9._REKIND * x ** 2 ) ! dN3/dx
-     dndx( 4 ) = 0.0625_REKIND * ( -1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) ! dN4/dx
-ELSE IF ( n == 5 ) THEN  ! Order 5
-     dndx(1) = (1._REKIND - 2._REKIND * x - 12._REKIND * x ** 2 + 16._REKIND * x ** 3 ) / 6._REKIND ! dN1/dx
-     dndx(2) = 4._REKIND * ( -1._REKIND + 4._REKIND * x + 3._REKIND * x ** 2 - 8._REKIND * x ** 3 ) / 3._REKIND ! dN2/dx
-     dndx(3) = -10._REKIND * x + 16._REKIND * x ** 3 ! dN3/dx
-     dndx(4) = 4._REKIND * ( 1._REKIND + 4._REKIND * x - 3._REKIND * x ** 2 - 8._REKIND * x ** 3 ) / 3._REKIND ! dN4/dx
-     dndx(5) = (-1._REKIND - 2._REKIND * x + 12._REKIND * x ** 2 + 16._REKIND * x ** 3 ) / 6._REKIND ! dN5/dx
-ELSE IF( n > 5 ) THEN ! Order > 5
-     eps = SQRT(EPSILON(1._REKIND)) ! Differential
-     iso(1) = -1._REKIND - 2._REKIND / REAL(n-1, REKIND)
-     DO ii = 2, n ! Loop over nodes
-          iso(ii) = iso(ii-1) + 2._REKIND / REAL(n-1, REKIND) ! Isoparametric nodal coordinate, dimensionless
-     END DO ! End loop over nodes
-     dndxm = 1._REKIND ! Initialize dNm
-     dndx  = 1._REKIND ! Initialize dN
-     DO ii = 1, n ! Loop over nodes
-          DO jj = 1, n ! Loop over nodes
-               IF( jj /= ii) THEN ! Check if denominator is 0
-                    dndxm(ii) = dndxm(ii) * (iso(jj) - (x-eps)) / (iso(jj) - iso(ii)) ! dNm
-                    dndx(ii)  = dndx(ii)  * (iso(jj) - (x+eps)) / (iso(jj) - iso(ii)) ! dN
-               END IF ! End check if denominator is 0
-          END DO ! End loop over nodes
-     END DO ! End loop over nodes
-     dndx = (dndx - dndxm) / (eps + eps)
-END IF ! End conditional
-END SUBROUTINE shape1dx
-
-!---------------------------------------------------------------
-
-SUBROUTINE shape1ddx(ddndxdx, x, n)
-!
-! Calculates array containing the second derivative of the full Lagrangian shape function (ddndxdx) at x of order n
-!
-!      Date      Programmer   Description
-!  ------------ ------------ -----------------------------------
-!   05/02/2009     D.N.A.     Original Code
-!   07/07/2009     D.N.A.     Added KIND parameters
-!   01/17/2011     D.N.A.     Added higher orders and fixed order 5 elements 2&3
-!
-
-IMPLICIT NONE
-
-INTEGER, INTENT(IN) :: n
-REAL(kind=REKIND), INTENT(IN) :: x
-REAL(kind=REKIND), DIMENSION(n), INTENT(OUT) :: ddndxdx
-REAL(kind=REKIND) :: eps
-REAL(kind=REKIND), DIMENSION(n) :: ddndxdxm
-
-IF ( n == 2 ) THEN
-     ddndxdx = [ 0._REKIND, 0._REKIND ]
-ELSE IF ( n == 3 ) THEN
-     ddndxdx = [ 1._REKIND, -2._REKIND, 1._REKIND ]
-ELSE IF ( n == 4 ) THEN
-     ddndxdx( 1 ) =  1.125_REKIND -  3.375_REKIND * x
-     ddndxdx( 2 ) = -1.125_REKIND + 10.125_REKIND * x
-     ddndxdx( 3 ) = -1.125_REKIND - 10.125_REKIND * x
-     ddndxdx( 4 ) =  1.125_REKIND +  3.375_REKIND * x
-ELSE IF ( n == 5 ) THEN
-     ddndxdx(1) = (-1._REKIND  - 12._REKIND * x + 24._REKIND * x ** 2 ) / 3._REKIND
-     ddndxdx(2) = ( 16._REKIND + 24._REKIND * x - 96._REKIND * x ** 2 ) / 3._REKIND
-     ddndxdx(3) = -10._REKIND + 48._REKIND * x ** 2
-     ddndxdx(4) = ( 16._REKIND - 24._REKIND * x - 96._REKIND * x ** 2 ) / 3._REKIND
-     ddndxdx(5) = (-1._REKIND  + 12._REKIND * x + 24._REKIND * x ** 2 ) / 3._REKIND
-ELSE IF ( n > 5) THEN
-     eps = 10._REKIND * SQRT(EPSILON(1._REKIND))
-     CALL shape1dx(ddndxdxm, x-eps, n)
-     CALL shape1dx(ddndxdx,  x+eps, n)
-     ddndxdx = (ddndxdx - ddndxdxm) / (eps + eps)
-END IF
-END SUBROUTINE shape1ddx
-
-!---------------------------------------------------------------
-
-SUBROUTINE shape2x(nout, x, y, n)
-!
-! Calculates array containing the full Lagrangian shape function (nout) at coordinate (x,y) of order n. This subroutine is
-! limited to orders of 2 - 4 (for Q4, Q9, and Q16 elements).
-!
-!      Date      Programmer   Description
-!  ------------ ------------ -----------------------------------
-!   05/15/2009     D.N.A.     Original Code
-!   07/07/2009     D.N.A.     Added KIND parameters
-!
-
-IMPLICIT NONE
-
-INTEGER, INTENT(IN) :: n  ! Order shape function
-REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate of point to evaluate shape function at
-REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate of point to evaluate shape function at
-REAL(kind=REKIND), DIMENSION(n ** 2) :: ns ! Shape function array of order n at point (x,y)
-REAL(kind=REKIND), INTENT(OUT), DIMENSION(2,2*(n**2)) :: nout ! 2D Shape functions
-INTEGER :: ii, jj ! Counter
-
-order: IF ( n == 2 ) THEN ! Order 2
-     ! Shape:
-     ! 4 -- 3
-     ! |    |
-     ! 1 -- 2
-     ns( 1 ) = 0.25_REKIND * ( 1._REKIND - x ) * ( 1._REKIND - y ) ! N1
-     ns( 2 ) = 0.25_REKIND * ( x + 1._REKIND ) * ( 1._REKIND - y ) ! N2
-     ns( 3 ) = 0.25_REKIND * ( x + 1._REKIND ) * ( y + 1._REKIND ) ! N3
-     ns( 4 ) = 0.25_REKIND * ( 1._REKIND - x ) * ( y + 1._REKIND ) ! N4
-ELSE IF ( n == 3 ) THEN order ! Order 3
-     ! Shape:
-     ! 4 - 7 - 3
-     ! |   |   |
-     ! 8 - 9 - 6
-     ! |   |   |
-     ! 1 - 5 - 2
-     ns( 1 ) = 0.25_REKIND * ( -x + x ** 2 ) * ( -y + y ** 2 ) ! N1
-     ns( 2 ) = 0.25_REKIND * (  x + x ** 2 ) * ( -y + y ** 2 ) !N2
-     ns( 3 ) = 0.25_REKIND * (  x + x ** 2 ) * (  y + y ** 2 ) !N3
-     ns( 4 ) = 0.25_REKIND * ( -x + x ** 2 ) * (  y + y ** 2 ) ! N4
-     ns( 5 ) = 0.5_REKIND * (1._REKIND - x ** 2) * ( -y + y ** 2 ) ! N5
-     ns( 6 ) = 0.5_REKIND * ( x + x ** 2 ) * (1._REKIND - y ** 2) !N6
-     ns( 7 ) = 0.5_REKIND * (1._REKIND - x ** 2) * ( y + y ** 2 ) ! N7
-     ns( 8 ) = 0.5_REKIND * ( -x + x ** 2 ) * (1._REKIND - y ** 2) ! N8
-     ns( 9 ) = (1._REKIND - x ** 2) * (1._REKIND - y ** 2) ! N9
-ELSE IF (n == 4 ) THEN order ! Order 4
-     ! Shape:
-     ! 4  - 10 - 9  - 3
-     ! |    |    |    |
-     ! 11 - 16 - 15 - 8
-     ! |    |    |    |
-     ! 12 - 13 - 14 - 7
-     ! |    |    |    |f
-     ! 1  - 5  - 6  - 2
-     ns(  1 ) = 0.00390625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! N1
-     ns(  2 ) = 0.00390625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! N2
-     ns(  3 ) = 0.00390625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! N3
-     ns(  4 ) = 0.00390625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! N4
-     ns(  5 ) = 0.03515625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! N5
-     ns(  6 ) = 0.03515625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! N6
-     ns(  7 ) = 0.03515625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! N7
-     ns(  8 ) = 0.03515625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! N8
-     ns(  9 ) = 0.03515625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! N9
-     ns( 10 ) = 0.03515625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! N10
-     ns( 11 ) = 0.03515625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! N11
-     ns( 12 ) = 0.03515625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! N12
-     ns( 13 ) = 0.31640625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! N13
-     ns( 14 ) = 0.31640625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! N14
-     ns( 15 ) = 0.31640625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! N15
-     ns( 16 ) = 0.31640625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! N16
-END IF order ! End Conditional
-nout = 0._REKIND
-jj = 0
-nodel: DO ii = 1, n ** 2 ! Loop over spatial nodes
-     jj = jj + 2
-     nout(1, jj-1) = ns(ii) ! x-direction shape functions
-     nout(2, jj)   = ns(ii) ! y-direction shape functions
-END DO nodel ! End loop over spatial nodes
-
-END SUBROUTINE shape2x
-
-!---------------------------------------------------------------
-
-SUBROUTINE shape2dx(dns, dnxy, x, y, n)
-!
-! Calculates array containing the first derivatives of the full Lagrangian shape function (dns and dnxy) at coordinate (x,y) of
-! order n. This subroutine is limited to orders of 2 - 4 (for Q4, Q9, and Q16 elements). The outputs are used to calculate the 2D
-! Jacobian and the strain displacement matrix.
-!
-!      Date      Programmer   Description
-!  ------------ ------------ -----------------------------------
-!   05/02/2009     D.N.A.     Original Code
-!   07/07/2009     D.N.A.     Added KIND parameters
-!
-
-IMPLICIT NONE
-
-INTEGER :: ii, jj, kk ! Counter
-INTEGER, INTENT(IN) :: n  ! Order shape function
-REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate of point to evaluate shape function at
-REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate of point to evaluate shape function at
-REAL(kind=REKIND), INTENT(OUT), DIMENSION(2,n**2) :: dns ! 2D Shape functions
-REAL(kind=REKIND), INTENT(OUT), DIMENSION(4,2*(n**2)) :: dnxy ! 2D Shape functions
-order: IF ( n == 2 ) THEN ! Order 2
-     ! Shape:
-     ! 4 -- 3
-     ! |    |
-     ! 1 -- 2
-     dns( 1, 1 ) = -0.25_REKIND + 0.25_REKIND * y ! dN1dx
-     dns( 1, 2 ) =  0.25_REKIND - 0.25_REKIND * y ! dN2dx
-     dns( 1, 3 ) =  0.25_REKIND + 0.25_REKIND * y ! dN3dx
-     dns( 1, 4 ) = -0.25_REKIND - 0.25_REKIND * y ! dN4dx
-     dns( 2, 1 ) = -0.25_REKIND + 0.25_REKIND * x ! dN1dy
-     dns( 2, 2 ) = -0.25_REKIND - 0.25_REKIND * x ! dN2dy
-     dns( 2, 3 ) =  0.25_REKIND + 0.25_REKIND * x ! dN3dy
-     dns( 2, 4 ) =  0.25_REKIND - 0.25_REKIND * x ! dN4dy
-ELSE IF ( n == 3 ) THEN order ! Order 3
-     ! Shape:
-     ! 4 - 7 - 3
-     ! |   |   |
-     ! 8 - 9 - 6
-     ! |   |   |
-     ! 1 - 5 - 2
-     dns( 1, 1 ) = 0.25_REKIND * ( -1._REKIND + x + x ) * ( -y + y ** 2 ) ! N1
-     dns( 1, 2 ) = 0.25_REKIND * ( 1._REKIND + x + x ) * ( -y + y ** 2 ) !N2
-     dns( 1, 3 ) = 0.25_REKIND * ( 1._REKIND + x + x ) * (  y + y ** 2 ) !N3
-     dns( 1, 4 ) = 0.25_REKIND * ( -1._REKIND + x + x ) * (  y + y ** 2 ) ! N4
-     dns( 1, 5 ) = 0.5_REKIND * (-2._REKIND * x ) * ( -y + y ** 2 ) ! N5
-     dns( 1, 6 ) = 0.5_REKIND * ( 1._REKIND + x + x ) * (1._REKIND - y ** 2) !N6
-     dns( 1, 7 ) = 0.5_REKIND * (-2._REKIND * x ) * ( y + y ** 2 ) ! N7
-     dns( 1, 8 ) = 0.5_REKIND * ( -1._REKIND + x + x ) * (1._REKIND - y ** 2) ! N8
-     dns( 1, 9 ) = -x - x + x*y*y + x*y*y ! N9
-     dns( 2, 1 ) = 0.25_REKIND * ( -x + x ** 2 ) * ( -1._REKIND + y + y ) ! N1
-     dns( 2, 2 ) = 0.25_REKIND * (  x + x ** 2 ) * ( -1._REKIND + y + y ) ! N2
-     dns( 2, 3 ) = 0.25_REKIND * (  x + x ** 2 ) * (  1._REKIND + y + y ) ! N3
-     dns( 2, 4 ) = 0.25_REKIND * ( -x + x ** 2 ) * (  1._REKIND + y + y ) ! N4
-     dns( 2, 5 ) = 0.5_REKIND * (1._REKIND - x ** 2) * ( -1._REKIND + y + y ) ! N5
-     dns( 2, 6 ) = -x*y - y*x*x !N6
-     dns( 2, 7 ) = 0.5_REKIND * (1._REKIND - x ** 2) * (  1._REKIND + y + y ) ! N7
-     dns( 2, 8 ) = x*y - y*x*x ! N8
-     dns( 2, 9 ) = -y - y + y*x*x + y*x*x ! N9
-ELSE IF (n == 4 ) THEN order ! Order 4
-     ! Shape:
-     ! 4  - 10 - 9  - 3
-     ! |    |    |    |
-     ! 11 - 16 - 15 - 8
-     ! |    |    |    |
-     ! 12 - 13 - 14 - 7
-     ! |    |    |    |
-     ! 1  - 5  - 6  - 2
-     dns( 1,  1 ) = 0.00390625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! dN1dx
-     dns( 1,  2 ) = 0.00390625_REKIND * ( -1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! dN2dx
-     dns( 1,  3 ) = 0.00390625_REKIND * ( -1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! dN3dx
-     dns( 1,  4 ) = 0.00390625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! dN4dx
-     dns( 1,  5 ) = 0.03515625_REKIND * ( -3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! dN5dx
-     dns( 1,  6 ) = 0.03515625_REKIND * ( 3._REKIND  - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-               & * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 ) ! dN6dx
-     dns( 1,  7 ) = 0.03515625_REKIND * ( -1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! dN7dx
-     dns( 1,  8 ) = 0.03515625_REKIND * ( -1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! dN8dx
-     dns( 1,  9 ) = 0.03515625_REKIND * ( 3._REKIND  - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! dN9dx
-     dns( 1, 10 ) = 0.03515625_REKIND * ( -3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2 ) &
-               & * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 ) ! dN10dx
-     dns( 1, 11 ) = 0.03515625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! dN11dx
-     dns( 1, 12 ) = 0.03515625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! dN12dx
-     dns( 1, 13 ) = 0.31640625_REKIND * ( -3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! dN13dx
-     dns( 1, 14 ) = 0.31640625_REKIND * ( 3._REKIND  - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-               & * (  1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 ) ! dN14dx
-     dns( 1, 15 ) = 0.31640625_REKIND * ( 3._REKIND  - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! dN15dx
-     dns( 1, 16 ) = 0.31640625_REKIND * ( -3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2 ) &
-               & * (  1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 ) ! dN16dx
-     dns( 2,  1 ) = 0.00390625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2 ) ! dN1dy
-     dns( 2,  2 ) = 0.00390625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2 ) ! dN2dy
-     dns( 2,  3 ) = 0.00390625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2 ) ! dN3dy
-     dns( 2,  4 ) = 0.00390625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2 ) ! dN4dy
-     dns( 2,  5 ) = 0.03515625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2 ) ! dN5dy
-     dns( 2,  6 ) = 0.03515625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2 ) ! dN6dy
-     dns( 2,  7 ) = 0.03515625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * ( -3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2 ) ! dN7dy
-     dns( 2,  8 ) = 0.03515625_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) &
-               & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2 ) ! dN8dy
-     dns( 2,  9 ) = 0.03515625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2 ) ! dN9dy
-     dns( 2, 10 ) = 0.03515625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * ( -1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2 ) ! dN10dy
-     dns( 2, 11 ) = 0.03515625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2 ) ! dN11dy
-     dns( 2, 12 ) = 0.03515625_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) &
-               & * ( -3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2 ) ! dN12dy
-     dns( 2, 13 ) = 0.31640625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * ( -3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2 ) ! dN13dy
-     dns( 2, 14 ) = 0.31640625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * ( -3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2 ) ! dN14dy
-     dns( 2, 15 ) = 0.31640625_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) &
-               & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2 ) ! dN15dy
-     dns( 2, 16 ) = 0.31640625_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) &
-               & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2 ) ! dN16dy
-END IF order ! End conditional
-
-! Initialize x/y direction shape functions
-dnxy = 0._REKIND
-jj = 0
-kk = -1
-nodel: DO ii = 1, n ** 2 ! Loop over nodes
-     jj = jj + 2
-     kk = kk + 2
-     dnxy(1, kk) = dns(1, ii)
-     dnxy(2, kk) = dns(2, ii)
-     dnxy(3, jj) = dns(1, ii)
-     dnxy(4, jj) = dns(2, ii)
-! modified by Rui at May 27 2015
-! refer to 'Robert D, et al. Concepts and application of FEA: isoparametric elements'
-END DO nodel ! End loop over nodes
-
-END SUBROUTINE shape2dx
-
-!---------------------------------------------------------------
-
-SUBROUTINE shape2dxx(dnxx, dnyy, x, y, n)
-!
-! Calculates array containing the second derivatives of the full Lagrangian shape function (nout) at coordinate (x,y) of order n.
-! This subroutine is limited to orders of 2 - 4 (for Q4, Q9, and Q16 elements). The outputs are used to calculate the 2D Jacobian
-! and the strain displacement matrix.
-!
-!      Date      Programmer   Description
-!  ------------ ------------ -----------------------------------
-!   10/26/2011     D.N.A.     Original Code
-!
-
-IMPLICIT NONE
-
-INTEGER :: ii, jj, kk ! Counter
-INTEGER, INTENT(IN) :: n  ! Order shape function
-REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate of point to evaluate shape function at
-REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate of point to evaluate shape function at
-REAL(kind=REKIND), DIMENSION(n ** 2) :: ddndxdx, ddndxdy, ddndydx, ddndydy ! Shape function array of order n at point (x,y)
-REAL(kind=REKIND), INTENT(OUT), DIMENSION(3,2*(n**2)) :: dnxx, dnyy ! 2D Shape functions
-
-order: IF ( n == 2 ) THEN ! Order 2
-     ! Shape:
-     ! 4 -- 3
-     ! |    |
-     ! 1 -- 2
-     ddndxdx( 1 ) =  0._REKIND   ! N1,xx
-     ddndxdx( 2 ) =  0._REKIND   ! N2,xx
-     ddndxdx( 3 ) =  0._REKIND   ! N3,xx
-     ddndxdx( 4 ) =  0._REKIND   ! N4,xx
-     ddndxdy( 1 ) =  0.25_REKIND ! N1,xy
-     ddndxdy( 2 ) = -0.25_REKIND ! N2,xy
-     ddndxdy( 3 ) =  0.25_REKIND ! N3,xy
-     ddndxdy( 4 ) = -0.25_REKIND ! N4,xy
-     ddndydy( 1 ) =  0._REKIND   ! N1,yy
-     ddndydy( 2 ) =  0._REKIND   ! N2,yy
-     ddndydy( 3 ) =  0._REKIND   ! N3,yy
-     ddndydy( 4 ) =  0._REKIND   ! N4,yy
-     ddndydx( 1 ) =  0.25_REKIND ! N1,yx
-     ddndydx( 2 ) = -0.25_REKIND ! N2,yx
-     ddndydx( 3 ) =  0.25_REKIND ! N3,yx
-     ddndydx( 4 ) = -0.25_REKIND ! N4,yx
-ELSE IF ( n == 3 ) THEN order ! Order 3
-     ! Shape:
-     ! 4 - 7 - 3
-     ! |   |   |
-     ! 8 - 9 - 6
-     ! |   |   |
-     ! 1 - 5 - 2
-     ddndxdx( 1 ) = 0.5_REKIND * ( y ** 2 - y ) ! N1,xx
-     ddndxdx( 2 ) = 0.5_REKIND * ( y ** 2 - y ) ! N2,xx
-     ddndxdx( 3 ) = 0.5_REKIND * ( y ** 2 + y ) ! N3,xx
-     ddndxdx( 4 ) = 0.5_REKIND * ( y ** 2 + y ) ! N4,xx
-     ddndxdx( 5 ) = y - y ** 2 ! N5,xx
-     ddndxdx( 6 ) = 1._REKIND - y ** 2 ! N6,xx
-     ddndxdx( 7 ) = -y - y ** 2 ! N7,xx
-     ddndxdx( 8 ) = 1._REKIND - y ** 2 ! N8,xx
-     ddndxdx( 9 ) = -2._REKIND + 2._REKIND * y ** 2 ! N9,xx
-     ddndxdy( 1 ) =  0.25_REKIND - 0.5_REKIND * ( x + y ) + x * y ! N1,xy
-     ddndxdy( 2 ) = -0.25_REKIND - 0.5_REKIND * ( x - y ) + x * y ! N2,xy
-     ddndxdy( 3 ) =  0.25_REKIND + 0.5_REKIND * ( x + y ) + x * y ! N3,xy
-     ddndxdy( 4 ) = -0.25_REKIND + 0.5_REKIND * ( x - y ) + x * y ! N4,xy
-     ddndxdy( 5 ) =  x - 2._REKIND * x * y ! N5,xy
-     ddndxdy( 6 ) = -y - 2._REKIND * x * y ! N6,xy
-     ddndxdy( 7 ) = -x - 2._REKIND * x * y ! N7,xy
-     ddndxdy( 8 ) =  y - 2._REKIND * x * y ! N8,xy
-     ddndxdy( 9 ) = 4._REKIND * x * y ! N9,xy
-     ddndydy( 1 ) = 0.5_REKIND * ( x ** 2 - x ) ! N1,yy
-     ddndydy( 2 ) = 0.5_REKIND * ( x ** 2 + x ) ! N2,yy
-     ddndydy( 3 ) = 0.5_REKIND * ( x ** 2 + x ) ! N3,yy
-     ddndydy( 4 ) = 0.5_REKIND * ( x ** 2 - x ) ! N4,yy
-     ddndydy( 5 ) = 1._REKIND - x ** 2 ! N5,yy
-     ddndydy( 6 ) = -x - x ** 2 ! N6,yy
-     ddndydy( 7 ) = 1._REKIND - x ** 2 ! N7,yy
-     ddndydy( 8 ) = x - x ** 2  ! N8,yy
-     ddndydy( 9 ) = -2._REKIND + 2._REKIND * x ** 2 ! N9,yy
-     ddndydx( 1 ) =  0.25_REKIND - 0.5_REKIND * ( x + y ) + x * y ! N1,yx
-     ddndydx( 2 ) = -0.25_REKIND - 0.5_REKIND * ( x - y ) + x * y ! N2,yx
-     ddndydx( 3 ) =  0.25_REKIND + 0.5_REKIND * ( x + y ) + x * y ! N3,yx
-     ddndydx( 4 ) = -0.25_REKIND + 0.5_REKIND * ( x - y ) + x * y ! N4,yx
-     ddndydx( 5 ) =  x - 2._REKIND * x * y ! N5,yx
-     ddndydx( 6 ) = -y - 2._REKIND * x * y ! N6,yx
-     ddndydx( 7 ) = -x - 2._REKIND * x * y ! N7,yx
-     ddndydx( 8 ) =  y - 2._REKIND * x * y ! N8,yx
-     ddndydx( 9 ) = 4._REKIND * x * y ! N9,yx
-ELSE IF (n == 4 ) THEN order ! Order 4
-     ! Shape:
-     ! 4  - 10 - 9  - 3
-     ! |    |    |    |
-     ! 11 - 16 - 15 - 8
-     ! |    |    |    |
-     ! 12 - 13 - 14 - 7
-     ! |    |    |    |
-     ! 1  - 5  - 6  - 2
-     ! N_xx:
-     ddndxdx(  1 ) = 0.0703125_REKIND * ( 1._REKIND - 3._REKIND * x ) * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 )
-     ddndxdx(  2 ) = 0.0703125_REKIND * ( 1._REKIND + 3._REKIND * x ) * ( -1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 )
-     ddndxdx(  3 ) = 0.0703125_REKIND * ( 1._REKIND + 3._REKIND * x ) * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 )
-     ddndxdx(  4 ) = 0.0703125_REKIND * ( 1._REKIND - 3._REKIND * x ) * ( -1._REKIND - y + 9._REKIND * y ** 2 + 9._REKIND * y ** 3 )
-     ddndxdx(  5 ) = 0.0703125_REKIND * ( 1._REKIND - 9._REKIND * x ) * ( 1._REKIND - y - 9._REKIND * y ** 2 + 9._REKIND * y ** 3 )
-     ddndxdx(  6 ) = 0.0703125_REKIND * ( 1._REKIND + 9._REKIND * x ) * ( 1._REKIND - y - 9._REKIND * y ** 2 + 9._REKIND * y ** 3 )
-     ddndxdx(  7 ) = 0.6328125_REKIND * ( 1._REKIND + 3._REKIND * x ) * ( 1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 )
-     ddndxdx(  8 ) = 0.6328125_REKIND * ( 1._REKIND + 3._REKIND * x ) * ( 1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 )
-     ddndxdx(  9 ) = 0.0703125_REKIND * ( 1._REKIND + 9._REKIND * x ) * ( 1._REKIND + y + 9._REKIND * y ** 2 - 9._REKIND * y ** 3 )
-     ddndxdx( 10 ) = 0.0703125_REKIND * ( 1._REKIND - 9._REKIND * x ) * ( 1._REKIND + y - 9._REKIND * y ** 2 - 9._REKIND * y ** 3 )
-     ddndxdx( 11 ) = 0.6328125_REKIND * ( 1._REKIND - 3._REKIND * x ) * ( 1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 )
-     ddndxdx( 12 ) = 0.6328125_REKIND * ( 1._REKIND - 3._REKIND * x ) * ( 1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 )
-     ddndxdx( 13 ) = 0.6328125_REKIND * ( -1._REKIND + 9._REKIND * x ) * ( 1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 )
-     ddndxdx( 14 ) = 0.6328125_REKIND * ( -1._REKIND - 9._REKIND * x ) * ( 1._REKIND - 3._REKIND * y - y ** 2 + 3._REKIND * y ** 3 )
-     ddndxdx( 15 ) = 0.6328125_REKIND * ( -1._REKIND - 9._REKIND * x ) * ( 1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 )
-     ddndxdx( 16 ) = 0.6328125_REKIND * ( -1._REKIND + 9._REKIND * x ) * ( 1._REKIND + 3._REKIND * y - y ** 2 - 3._REKIND * y ** 3 )
-     ddndxdy(  1 ) = 0.00390625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N1,xy
-     ddndxdy(  2 ) = 0.00390625_REKIND * (-1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N2,xy
-     ddndxdy(  3 ) = 0.00390625_REKIND * ( 1._REKIND - 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 1._REKIND - 18._REKIND * y - 27._REKIND * y ** 2) ! N3,xy
-     ddndxdy(  4 ) = 0.00390625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * (-1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2) ! N4,xy
-     ddndxdy(  5 ) = 0.03515625_REKIND * (-3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N5,xy
-     ddndxdy(  6 ) = 0.03515625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N6,xy
-     ddndxdy(  7 ) = 0.03515625_REKIND * ( 1._REKIND - 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 3._REKIND + 2._REKIND * y - 9._REKIND * y ** 2) ! N7,xy
-     ddndxdy(  8 ) = 0.03515625_REKIND * (-1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N8,xy
-     ddndxdy(  9 ) = 0.03515625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-          & * (-1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2) ! N9,xy
-     ddndxdy( 10 ) = 0.03515625_REKIND * ( 3._REKIND + 2._REKIND * x - 9._REKIND * x ** 2 ) &
-          & * ( 1._REKIND  - 18._REKIND * y - 27._REKIND * y ** 2) ! N10,xy
-     ddndxdy( 11 ) = 0.03515625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N11,xy
-     ddndxdy( 12 ) = 0.03515625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * (-3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2) ! N12,xy
-     ddndxdy( 13 ) = 0.31640625_REKIND * ( 3._REKIND + 2._REKIND * x - 9._REKIND * x ** 2) &
-          & * ( 3._REKIND + 2._REKIND * y - 9._REKIND * y ** 2) ! N13,xy
-     ddndxdy( 14 ) = 0.31640625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2) &
-          & * (-3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2) ! N14,xy
-     ddndxdy( 15 ) = 0.31640625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N15,xy
-     ddndxdy( 16 ) = 0.31640625_REKIND * (-3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N16,xy
-
-     ! N_yy
-     ddndydy(  1 ) = 0.0703125_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) * ( 1._REKIND - 3._REKIND * y )
-     ddndydy(  2 ) = 0.0703125_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) * ( 1._REKIND - 3._REKIND * y )
-     ddndydy(  3 ) = 0.0703125_REKIND * ( -1._REKIND - x + 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) * ( 1._REKIND + 3._REKIND * y )
-     ddndydy(  4 ) = 0.0703125_REKIND * ( -1._REKIND + x + 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) * ( 1._REKIND + 3._REKIND * y )
-     ddndydy(  5 ) = 0.6328125_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) * ( 1._REKIND - 3._REKIND * y )
-     ddndydy(  6 ) = 0.6328125_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) * ( 1._REKIND - 3._REKIND * y )
-     ddndydy(  7 ) = 0.0703125_REKIND * (  1._REKIND + x - 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) * ( 1._REKIND - 9._REKIND * y )
-     ddndydy(  8 ) = 0.0703125_REKIND * (  1._REKIND + x - 9._REKIND * x ** 2 - 9._REKIND * x ** 3 ) * ( 1._REKIND + 9._REKIND * y )
-     ddndydy(  9 ) = 0.6328125_REKIND * (  1._REKIND + 3._REKIND * x - x ** 2 - 3._REKIND * x ** 3 ) * ( 1._REKIND + 3._REKIND * y )
-     ddndydy( 10 ) = 0.6328125_REKIND * (  1._REKIND - 3._REKIND * x - x ** 2 + 3._REKIND * x ** 3 ) * ( 1._REKIND + 3._REKIND * y )
-     ddndydy( 11 ) = 0.0703125_REKIND * (  1._REKIND - x - 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) * ( 1._REKIND + 9._REKIND * y )
-     ddndydy( 12 ) = 0.0703125_REKIND * (  1._REKIND - x - 9._REKIND * x ** 2 + 9._REKIND * x ** 3 ) * ( 1._REKIND - 9._REKIND * y )
-     ddndydy( 13 ) = 0.6328125_REKIND * ( -1._REKIND + 3._REKIND * x + x ** 2 - 3._REKIND * x ** 3 ) * ( 1._REKIND - 9._REKIND * y )
-     ddndydy( 14 ) = 0.6328125_REKIND * ( -1._REKIND - 3._REKIND * x + x ** 2 + 3._REKIND * x ** 3 ) * ( 1._REKIND - 9._REKIND * y )
-     ddndydy( 15 ) = 0.6328125_REKIND * ( -1._REKIND - 3._REKIND * x + x ** 2 + 3._REKIND * x ** 3 ) * ( 1._REKIND + 9._REKIND * y )
-     ddndydy( 16 ) = 0.6328125_REKIND * ( -1._REKIND + 3._REKIND * x + x ** 2 - 3._REKIND * x ** 3 ) * ( 1._REKIND + 9._REKIND * y )
-
-     ddndydx(  1 ) = 0.00390625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N1,yx
-     ddndydx(  2 ) = 0.00390625_REKIND * (-1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N2,yx
-     ddndydx(  3 ) = 0.00390625_REKIND * ( 1._REKIND - 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 1._REKIND - 18._REKIND * y - 27._REKIND * y ** 2) ! N3,yx
-     ddndydx(  4 ) = 0.00390625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * (-1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2) ! N4,yx
-     ddndydx(  5 ) = 0.03515625_REKIND * (-3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N5,yx
-     ddndydx(  6 ) = 0.03515625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-          & * ( 1._REKIND + 18._REKIND * y - 27._REKIND * y ** 2) ! N6,yx
-     ddndydx(  7 ) = 0.03515625_REKIND * ( 1._REKIND - 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 3._REKIND + 2._REKIND * y - 9._REKIND * y ** 2) ! N7,yx
-     ddndydx(  8 ) = 0.03515625_REKIND * (-1._REKIND + 18._REKIND * x + 27._REKIND * x ** 2 ) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N8,yx
-     ddndydx(  9 ) = 0.03515625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2 ) &
-          & * (-1._REKIND + 18._REKIND * y + 27._REKIND * y ** 2) ! N9,yx
-     ddndydx( 10 ) = 0.03515625_REKIND * ( 3._REKIND + 2._REKIND * x - 9._REKIND * x ** 2 ) &
-          & * ( 1._REKIND  - 18._REKIND * y - 27._REKIND * y ** 2) ! N10,yx
-     ddndydx( 11 ) = 0.03515625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N11,yx
-     ddndydx( 12 ) = 0.03515625_REKIND * ( 1._REKIND + 18._REKIND * x - 27._REKIND * x ** 2 ) &
-          & * (-3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2) ! N12,yx
-     ddndydx( 13 ) = 0.31640625_REKIND * ( 3._REKIND + 2._REKIND * x - 9._REKIND * x ** 2) &
-          & * ( 3._REKIND + 2._REKIND * y - 9._REKIND * y ** 2) ! N13,yx
-     ddndydx( 14 ) = 0.31640625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2) &
-          & * (-3._REKIND - 2._REKIND * y + 9._REKIND * y ** 2) ! N14,yx
-     ddndydx( 15 ) = 0.31640625_REKIND * ( 3._REKIND - 2._REKIND * x - 9._REKIND * x ** 2) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N15,yx
-     ddndydx( 16 ) = 0.31640625_REKIND * (-3._REKIND - 2._REKIND * x + 9._REKIND * x ** 2) &
-          & * ( 3._REKIND - 2._REKIND * y - 9._REKIND * y ** 2) ! N16,yx
-END IF order ! End conditional
-dnxx = 0._REKIND
-dnyy = 0._REKIND
-jj = 0
-kk = -1
-nodel: DO ii = 1, n ** 2 ! Loop over spatial nodes
-     jj = jj + 2
-     kk = kk + 2
-     dnxx(1,kk) = 0.5_REKIND  * ddndxdx(ii) ! x-direction shape functions
-     dnxx(2,jj) = 0.5_REKIND  * ddndxdy(ii) ! y-direction shape functions
-     dnxx(3,kk) = ddndxdx(ii) + ddndydy(ii) ! x-direction shape functions
-     dnyy(1,jj) = 0.5_REKIND  * ddndydy(ii) ! y-direction shape functions
-     dnyy(2,kk) = 0.5_REKIND  * ddndydx(ii) ! y-direction shape functions
-     dnyy(3,jj) = ddndxdx(ii) + ddndydy(ii) ! y-direction shape functions
-END DO nodel ! End loop over spatial nodes
-
-END SUBROUTINE shape2dxx
-
-!---------------------------------------------------------------
-
 SUBROUTINE shape3x(nout, x, y, z, n)
 !
 ! Calculates array containing the full Lagrangian shape function (nout) at 
@@ -1413,6 +796,93 @@ nodel: DO ii = 1, n ** 3 ! Loop over nodes
 END DO nodel ! End loop over nodes
 
 END SUBROUTINE shape3dx
+
+SUBROUTINE shapex(ns, x, y, z, n)
+!
+! Calculates array containing the full Lagrangian shape function (nout) at
+! coordinate (x,y,z) of order n. This subroutine is limited to 8-node and
+! 20-node brick elements in 3D
+!
+!      Date      Programmer   Description
+!  ------------ ------------ -----------------------------------
+!   09/18/2015   Rui Zhang                  Original Code
+!   03/01/2017   Hossein Pourmatin      Modified
+
+IMPLICIT NONE
+
+INTEGER, INTENT(IN) :: n  ! Order shape function
+REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate
+REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate
+REAL(kind=REKIND), INTENT(IN) :: z  ! Z-coordinate
+REAL(kind=REKIND), INTENT(OUT), DIMENSION(n**3) :: ns ! Shape function array of order n at point (x,y,z)
+
+order: IF ( n == 2 ) THEN ! 8-node brick element
+    ns(1) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND-y)*(1._REKIND+z) ! N1
+    ns(2) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND-y)*(1._REKIND-z) ! N2
+    ns(3) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND+y)*(1._REKIND-z) ! N3
+    ns(4) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND+y)*(1._REKIND+z) ! N4
+    ns(5) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND-y)*(1._REKIND+z) ! N5
+    ns(6) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND-y)*(1._REKIND-z) ! N6
+    ns(7) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND+y)*(1._REKIND-z) ! N7
+    ns(8) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND+y)*(1._REKIND+z) ! N8
+ELSE IF ( n == 3 ) THEN order ! Order 3
+
+END IF order ! End Conditional
+
+END SUBROUTINE shapex
+
+!---------------------------------------------------------------
+
+SUBROUTINE shapedx(dns, x, y, z, n)
+!
+! Calculates array containing the first derivatives of the full Lagrangian
+! shape function (dns and dnxyz) at coordinate (x,y,z) of order n. This
+! subroutine is limited 8-node and 20-node brick elements. The outputs
+! are used to calculate the 3D Jacobian and the strain displacement matrix.
+!
+!      Date      Programmer   Description
+!  ------------ ------------ -----------------------------------
+!   09/18/2015   Rui Zhang                  Original Code
+!   03/01/2017   Hossein Pourmatin      Modified
+
+IMPLICIT NONE
+
+INTEGER :: ii, jj, kk, ll ! Counter
+INTEGER, INTENT(IN) :: n  ! Order shape function
+REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate
+REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate
+REAL(kind=REKIND), INTENT(IN) :: z  ! Z-coordinate
+REAL(kind=REKIND), INTENT(OUT), DIMENSION(n**3, 3) :: dns ! 3D Shape functions
+order: IF ( n == 2 ) THEN ! 8-node brick element
+    dns(1, 1) = -0.125_REKIND*(1._REKIND-y)*(1._REKIND+z) ! dN1dx
+    dns(2, 1) = -0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN2dx
+    dns(3, 1) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN3dx
+    dns(4, 1) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN4dx
+    dns(5, 1) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND+z) ! dN5dx
+    dns(6, 1) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN6dx
+    dns(7, 1) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN7dx
+    dns(8, 1) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN8dx
+    dns(1, 2) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN1dy
+    dns(2, 2) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND-z) ! dN2dy
+    dns(3, 2) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-z) ! dN3dy
+    dns(4, 2) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN4dy
+    dns(5, 2) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN5dy
+    dns(6, 2) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN6dy
+    dns(7, 2) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN7dy
+    dns(8, 2) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN8dy
+    dns(1, 3) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN1dz
+    dns(2, 3) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN2dz
+    dns(3, 3) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND+y) ! dN3dz
+    dns(4, 3) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+y) ! dN4dz
+    dns(5, 3) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN5dz
+    dns(6, 3) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN6dz
+    dns(7, 3) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN7dz
+    dns(8, 3) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN8dz
+ELSE IF ( n == 3 ) THEN order ! 20-node brick element
+
+END IF order ! End conditional
+
+END SUBROUTINE shapedx
 
 !---------------------------------------------------------------
 
