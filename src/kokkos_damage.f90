@@ -8,7 +8,8 @@ CHARACTER(LEN=80), INTENT(IN) :: jobname
 INTEGER, INTENT(IN) :: rank, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip
 INTEGER, DIMENSION(ne, nnse), INTENT(IN) :: xconn
 REAL(KIND=REKIND), DIMENSION(nnse, ngpe*ne), INTENT(IN) :: Nx, Ny, Nz
-REAL(KIND=REKIND), INTENT(IN) :: ym, nu, w
+REAL(KIND=REKIND), INTENT(IN) :: w
+REAL(KIND=REKIND), DIMENSION(ngpe*ne), INTENT(IN) :: ym, nu
 REAL(KIND=REKIND), DIMENSION(nnte), INTENT(IN) :: tcoorde
 REAL(KIND=REKIND), DIMENSION(2*nnte*nn*ndofn), INTENT(IN) :: sol
 INTEGER, DIMENSION(ngpe*ne), INTENT(IN) :: gpsta
@@ -84,7 +85,7 @@ ENDDO
 !--- Call KOKKOS host -------------------------------------------------------------
 CALL kokkos_host(%VAL(rank), %VAL(ne), %VAL(nn), %VAL(ndofn), %VAL(nnse), &
     & %VAL(nnte), %VAL(ngpe), %VAL(ncmp), %VAL(nip), gpu_nodes, gpu_Nx, &
-    & gpu_Ny, gpu_Nz, gpu_Nt, sol, gpu_eps_old, gpu_eps_pl, gpu_sig_eff, &
+    & gpu_Ny, gpu_Nz, gpu_Nt, sol, ym, nu, gpu_eps_old, gpu_eps_pl, gpu_sig_eff, &
     & gpu_sig_back, p, D, ws, del_po, sig_d)
 !--- Convert 1D array to 2D array ----------------------------------------------
 k = 1

@@ -55,6 +55,11 @@ y = 0.d0
 ! K part
 u = 0.d0
 ! Perform spMV first
+!DO i = 1, 6
+!    DO j= 1, 6
+!        PRINT *, 'a(',i, ',',j,')=', a(i,j), b(i,j)
+!    ENDDO
+!ENDDO
 DO i = 1, q
     CALL amux(p, x(1+(i-1)*p:i*p), u(1+(i-1)*p:i*p), kv, kj, ki)
 ENDDO
@@ -64,7 +69,6 @@ DO i = 1, q
         y(1+(i-1)*p:i*p) = y(1+(i-1)*p:i*p) + a(i,j)*u(1+(j-1)*p:j*p)
     ENDDO
 ENDDO
-! M part
 u = 0.d0
 ! Perform spMV first
 DO i = 1, q

@@ -24,7 +24,7 @@ class Kokkos_Kernel {
     
     int rank, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip;
     view_1D_int nodes;
-    view_1D_double Nx, Ny, Nz, Nt, sol, eps_old, eps_pl, sig_eff, sig_back, p, d, ws, del_po, sig_d;
+    view_1D_double Nx, Ny, Nz, Nt, sol, ym, nu, eps_old, eps_pl, sig_eff, sig_back, p, d, ws, del_po, sig_d;
     
     /* THIS CODE SHOULD BE ONLY USED FOR C3D8 ELEMENT TYPE */
     void dispinterp(int, int, view_1D_double) const;
@@ -32,9 +32,12 @@ class Kokkos_Kernel {
     void caldamage( int, view_1D_double ) const;
     
 public:
-    Kokkos_Kernel(int _rank, int _ne, int _nn, int _ndofn, int _nnse, int _nnte, int _ngpe, int _ncmp, int _nip, view_1D_int _nodes, view_1D_double _Nx, view_1D_double _Ny, view_1D_double _Nz,     view_1D_double _Nt, view_1D_double _sol, view_1D_double _eps_old, view_1D_double _eps_pl,view_1D_double _sig_eff, view_1D_double _sig_back, view_1D_double _p, view_1D_double _d, view_1D_double _ws, view_1D_double _del_po, view_1D_double _sig_d):
+    Kokkos_Kernel(int _rank, int _ne, int _nn, int _ndofn, int _nnse, int _nnte, int _ngpe, int _ncmp, int _nip, 
+		view_1D_int _nodes, view_1D_double _Nx, view_1D_double _Ny, view_1D_double _Nz, view_1D_double _Nt, 
+		view_1D_double _sol, view_1D_double _ym, view_1D_double _nu, view_1D_double _eps_old, view_1D_double _eps_pl,
+		view_1D_double _sig_eff, view_1D_double _sig_back, view_1D_double _p, view_1D_double _d, view_1D_double _ws, view_1D_double _del_po, view_1D_double _sig_d):
     rank(_rank), ne(_ne), nn(_nn), ndofn(_ndofn), nnse(_nnse), nnte(_nnte), ngpe(_ngpe), ncmp(_ncmp), nip(_nip),
-    nodes(_nodes), Nx(_Nx), Ny(_Ny), Nz(_Nz), Nt(_Nt), sol(_sol), eps_old(_eps_old),
+    nodes(_nodes), Nx(_Nx), Ny(_Ny), Nz(_Nz), Nt(_Nt), sol(_sol), ym(_ym), nu(_nu), eps_old(_eps_old),
     eps_pl(_eps_pl), sig_eff(_sig_eff), sig_back(_sig_back), p(_p), d(_d), ws(_ws), del_po(_del_po),
     sig_d(_sig_d) {};
     
@@ -43,6 +46,11 @@ public:
         //int ii = thread.league_rank() * thread.team_size() + thread.team_rank();
 	if (ii < ngpe*ne)
         {
+	    double a = (1.0+nu(ii))/(3.0*(1.0-nu(ii)));
+	    double b = 2.0*(4.0-5.0*nu(ii))/(15.0*(1.0-nu(ii)));
+	    double G = ym(ii)/(2.0*(1.0+nu(ii)));
+	    double K = ym(ii)/(3.0*(1.0-2.0*nu(ii)));
+	    double coef = ym(ii)/((1.+nu(ii))*(1.-2.*nu(ii)));
             /* loop over temporal interpolation points */
             for (int jj = 0; jj < nip; jj++)
             {
@@ -82,13 +90,13 @@ public:
                 {
                     for (int j = 0; j < 3; j++)
                     {
-                        dmat[i][j] = COEF*nu;
+                        dmat[i][j] = coef*nu(ii);
                     }
                 }
                 for (int i = 0; i < 3; i++)
                 {
-                    dmat[i][i] = COEF*(1.0-nu);
-                    dmat[i+3][i+3] = COEF*(1.0-2.0*nu)/2.0;
+                    dmat[i][i] = coef*(1.0-nu(ii));
+                    dmat[i+3][i+3] = coef*(1.0-2.0*nu(ii))/2.0;
                 }
                 /*------------------------------------------------------------------------------
                  Elastic prediction phase
@@ -297,7 +305,7 @@ public:
                                 sig_eff_p[i] = sig_eff(ii*ncmp+i);
                             }
                         }
-                        double Y_p = (1.0+nu)/(2.0*E)*(sig_eff_p[0]*sig_eff_p[0] + 
+                        double Y_p = (1.0+nu(ii))/(2.0*ym(ii))*(sig_eff_p[0]*sig_eff_p[0] + 
                                                        sig_eff_p[1]*sig_eff_p[1] + sig_eff_p[2]*sig_eff_p[2] + 
                                                        h*((1.0-d(ii))/(1.0-h*d(ii)))*((1.0-d(ii))/(1.0-h*d(ii)))*
                                                        (sig_eff_n[0]*sig_eff_n[0] + sig_eff_n[1]*sig_eff_n[1] + 
@@ -310,11 +318,11 @@ public:
                         double Y_n = 0.0;
                         if (tr_sig_eff >= 0.0)
                         {
-                            Y_n = nu/(2.0*E)*tr_sig_eff*tr_sig_eff;
+                            Y_n = nu(ii)/(2.0*ym(ii))*tr_sig_eff*tr_sig_eff;
                         }
                         else
                         {
-                            Y_n = nu/(2.0*E)*h*((1.0-d(ii))/(1.0-h*d(ii)))*
+                            Y_n = nu(ii)/(2.0*ym(ii))*h*((1.0-d(ii))/(1.0-h*d(ii)))*
                             ((1.0-d(ii))/(1.0-h*d(ii)))*tr_sig_eff*tr_sig_eff;
                         }
                         double Y = Y_p - Y_n;

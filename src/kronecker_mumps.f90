@@ -98,14 +98,15 @@ SUBROUTINE mpikronspgemv(a, b, alpha, beta, q, ki, kj, kv, mi, mj, mv, p, x, y)
 !     y      REAL       p*q         Output vector
 
 !! Variable declaration
+USE kinds
 IMPLICIT NONE
 ! ---External variables---
 INTEGER, INTENT(IN) :: p, q
 INTEGER, INTENT(IN) :: ki(*), mi(*), kj(*), mj(*)
-REAL(KIND=8), INTENT(IN) :: kv(*), mv(*), alpha, beta
-REAL(KIND=8), DIMENSION(q,q), INTENT(IN) :: a, b
-REAL(KIND=8), DIMENSION(p*q), INTENT(INOUT) :: x
-REAL(KIND=8), DIMENSION(p*q), INTENT(INOUT) :: y
+REAL(KIND=REKIND), INTENT(IN) :: kv(*), mv(*), alpha, beta
+REAL(KIND=REKIND), DIMENSION(q,q), INTENT(IN) :: a, b
+REAL(KIND=REKIND), DIMENSION(p*q), INTENT(INOUT) :: x
+REAL(KIND=REKIND), DIMENSION(p*q), INTENT(INOUT) :: y
 ! ---Internal variables---
 REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: z
 ALLOCATE(z(p*q))
@@ -115,7 +116,6 @@ y = alpha*z + beta*y
 DEALLOCATE(z)
 RETURN
 END SUBROUTINE mpikronspgemv
-
 
 SUBROUTINE mpilusol(a, p, q, mumps_par, x, y)
 ! Solve (A*LU)y = x for y, note that * is Kronecker product 
@@ -249,6 +249,11 @@ IF (mumps_par%MYID .EQ. 0) THEN
     ro0 = dnrm2(n, rhs, 1)
 ENDIF
 !-------------- compute initial residual vector --------------
+!DO i = 1, 6
+!    DO j= 1, 6
+!        PRINT *, 'a(',i, ',',j,')=', a(i,j), b(i,j)
+!    ENDDO
+!ENDDO
 CALL mpikronspmv(a, b, q, ki, kj, kv, mi, mj, mv, p, sol, v0)
 IF (mumps_par%MYID .EQ. 0) THEN
     vv(1:n,1) = v0
@@ -335,6 +340,7 @@ DO WHILE (its .LT. maxits)
             ! detrermine residual norm and test for convergence-
             hh(i,i) = c(i)*hh(i,i) + s(i)*hh(i1,i)
             ro = DABS(rs(i1))
+!PRINT *, 'itr:', its, 'ro= ', ro
             IF (iout .GT. 0) WRITE(iout, 199) its, ro/ro0
             IF (ro .LE. eps1)  THEN
                 stat = 1

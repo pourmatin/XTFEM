@@ -1,10 +1,27 @@
-SUBROUTINE getfextc(nstep, w, dt, fextc)
+SUBROUTINE getfextc_t(nstep, w, dt, fextc)
 USE kinds
 IMPLICIT NONE
 ! ---External variables---
 INTEGER, INTENT(IN) :: nstep
 REAL(KIND=REKIND), INTENT(IN) :: w, dt
-REAL(KIND=REKIND), DIMENSION(6), INTENT(OUT) :: fextc
+REAL(KIND=REKIND), DIMENSION(3), INTENT(OUT) :: fextc
+! ---Internal variables---
+REAL(KIND=REKIND) :: t1
+t1=(nstep-1)*dt
+fextc = 0._REKIND
+fextc(1) = t1*dt/6
+fextc(2) = dt*(2*t1+dt)/6
+fextc(3) = dt*(t1+dt)/6
+RETURN
+END SUBROUTINE getfextc_t
+
+SUBROUTINE getfextc_m(nstep, w, dt, fextc, fint)
+USE kinds
+IMPLICIT NONE
+! ---External variables---
+INTEGER, INTENT(IN) :: nstep
+REAL(KIND=REKIND), INTENT(IN) :: w, dt
+REAL(KIND=REKIND), DIMENSION(6), INTENT(OUT) :: fextc, fint
 ! ---Internal variables---
 REAL(KIND=REKIND) :: t1
 t1=(nstep-1)*dt
@@ -30,5 +47,11 @@ fextc(6) = (-16._REKIND+4._REKIND*dt**2*w**2+2._REKIND*COS(2._REKIND*t1*w)-    &
     & SIN(2._REKIND*t1*w)+8._REKIND*(dt*w*COS(t1*w)+4._REKIND*SIN(t1*w))*      &
     & SIN((dt+t1)*w)+9._REKIND*dt*w*SIN(2._REKIND*(dt+t1)*w))/(8._REKIND*      &
     & dt**2*w**2)
+fint(1) = -1._REKIND
+fint(2) = 0._REKIND
+fint(3) = 1._REKIND
+fint(4) = 0._REKIND
+fint(5) = 0._REKIND
+fint(6) = -SIN(t1*w) + SIN(w*(t1 + dt))
 RETURN
-END SUBROUTINE getfextc
+END SUBROUTINE getfextc_m

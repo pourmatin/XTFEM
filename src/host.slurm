@@ -5,10 +5,10 @@
 #SBATCH -J kokkos-xtfem3d     	# Job name
 #SBATCH -o xtfem.o%j      	# Name of stdout output file
 #SBATCH -e xtfem.o%j      	# Name of stdout output file
-#SBATCH -p normal 		# Queue name
-#SBATCH -N 2               	# Total number of nodes requested
-#SBATCH -n 48              	# Total number of mpi tasks requested
-#SBATCH -t 02:00:00        	# Run time (hh:mm:ss)
+#SBATCH -p development 		# Queue name
+#SBATCH -N 10               	# Total number of nodes requested
+#SBATCH -n 120              	# Total number of mpi tasks requested
+#SBATCH -t 01:10:00        	# Run time (hh:mm:ss)
 
 
 

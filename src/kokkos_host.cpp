@@ -18,7 +18,7 @@ extern "C" /* IMPORTANT! */
 
 void kokkos_host_(int rank, int ne, int nn, int ndofn, int nnse, int nnte,
     int ngpe, int ncmp, int nip, int *nodes, double *Nx, double *Ny,   
-    double *Nz, double *Nt, double *sol,double *eps_old, double *eps_pl, 
+    double *Nz, double *Nt, double *sol, double *ym, double* nu, double *eps_old, double *eps_pl, 
     double *sig_eff, double *sig_back, double *p, double *D, double *ws,  
     double *del_po, double *sig_d)
 {
@@ -47,6 +47,8 @@ void kokkos_host_(int rank, int ne, int nn, int ndofn, int nnse, int nnte,
     view_1D_double d_eps_pl ("Strain_Plastic", size_eps);
     view_1D_double d_sig_eff ("Stress_Eff", size_eps);
     view_1D_double d_sig_back ("Stress_Back", size_eps);
+    view_1D_double d_ym ("Elasticity", size_p);
+    view_1D_double d_nu ("nu", size_p);
     view_1D_double d_p ("Plasticity", size_p);
     view_1D_double d_D ("Damage", size_p);
     view_1D_double d_ws ("Energy", size_p);
@@ -60,6 +62,8 @@ void kokkos_host_(int rank, int ne, int nn, int ndofn, int nnse, int nnte,
     host_view_1D_double h_Nz = Kokkos::create_mirror_view (d_Nz);
     host_view_1D_double h_Nt = Kokkos::create_mirror_view (d_Nt);
     host_view_1D_double h_sol = Kokkos::create_mirror_view (d_sol);
+    host_view_1D_double h_ym = Kokkos::create_mirror_view (d_ym);
+    host_view_1D_double h_nu = Kokkos::create_mirror_view (d_nu);
     host_view_1D_double h_eps_old = Kokkos::create_mirror_view (d_eps_old);
     host_view_1D_double h_eps_pl = Kokkos::create_mirror_view (d_eps_pl);
     host_view_1D_double h_sig_eff = Kokkos::create_mirror_view (d_sig_eff);
@@ -94,7 +98,8 @@ void kokkos_host_(int rank, int ne, int nn, int ndofn, int nnse, int nnte,
     for (int i=0; i<size_p; i++) {
         h_sig_d(i) = sig_d[i];
         h_del_po(i) = del_po[i];
-	//printf("del_po( %i ) = %f\n",i,del_po[i]);
+        h_ym(i) = ym[i];
+        h_nu(i) = nu[i];
         h_p(i) = p[i];
         h_D(i) = D[i];
         h_ws(i) = ws[i];
@@ -107,6 +112,8 @@ void kokkos_host_(int rank, int ne, int nn, int ndofn, int nnse, int nnte,
     Kokkos::deep_copy (d_Nz, h_Nz);
     Kokkos::deep_copy (d_Nt, h_Nt);
     Kokkos::deep_copy (d_sol, h_sol);
+    Kokkos::deep_copy (d_ym, h_ym);
+    Kokkos::deep_copy (d_nu, h_nu);
     Kokkos::deep_copy (d_eps_old, h_eps_old);
     Kokkos::deep_copy (d_eps_pl, h_eps_pl);
     Kokkos::deep_copy (d_sig_eff, h_sig_eff);
@@ -132,7 +139,7 @@ void kokkos_host_(int rank, int ne, int nn, int ndofn, int nnse, int nnte,
     int League = (ngpe*ne+threadsPerTeam-1)/threadsPerTeam;
     /* Launch "League" number of teams of the maximum number of threads per team */
     const team_policy policy( League , threadsPerTeam );
-    Kokkos::parallel_for(ngpe*ne, Kokkos_Kernel(rank, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip, d_nodes, d_Nx, d_Ny, d_Nz, d_Nt, d_sol, d_eps_old, d_eps_pl, d_sig_eff, d_sig_back, d_p, d_D, d_ws, d_del_po, d_sig_d) );
+    Kokkos::parallel_for(ngpe*ne, Kokkos_Kernel(rank, ne, nn, ndofn, nnse, nnte, ngpe, ncmp, nip, d_nodes, d_Nx, d_Ny, d_Nz, d_Nt, d_sol, d_ym, d_nu, d_eps_old, d_eps_pl, d_sig_eff, d_sig_back, d_p, d_D, d_ws, d_del_po, d_sig_d) );
 /*------------------------------------------------------------------------------
     Copy data from device and cleanup memory
 ------------------------------------------------------------------------------*/

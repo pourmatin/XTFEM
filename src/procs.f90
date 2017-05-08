@@ -1295,7 +1295,6 @@ END DO nodel ! End loop over spatial nodes
 END SUBROUTINE shape2dxx
 
 !---------------------------------------------------------------
-
 SUBROUTINE shape3x(nout, x, y, z, n)
 !
 ! Calculates array containing the full Lagrangian shape function (nout) at 
@@ -1413,6 +1412,93 @@ nodel: DO ii = 1, n ** 3 ! Loop over nodes
 END DO nodel ! End loop over nodes
 
 END SUBROUTINE shape3dx
+
+SUBROUTINE shapex(ns, x, y, z, n)
+!
+! Calculates array containing the full Lagrangian shape function (nout) at 
+! coordinate (x,y,z) of order n. This subroutine is limited to 8-node and 
+! 20-node brick elements in 3D
+!
+!      Date      Programmer   Description
+!  ------------ ------------ -----------------------------------
+!   09/18/2015   Rui Zhang                  Original Code
+!   03/01/2017   Hossein Pourmatin      Modified
+
+IMPLICIT NONE
+
+INTEGER, INTENT(IN) :: n  ! Order shape function
+REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate
+REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate
+REAL(kind=REKIND), INTENT(IN) :: z  ! Z-coordinate
+REAL(kind=REKIND), INTENT(OUT), DIMENSION(n**3) :: ns ! Shape function array of order n at point (x,y,z)
+
+order: IF ( n == 2 ) THEN ! 8-node brick element
+     ns(1) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND-y)*(1._REKIND+z) ! N1
+     ns(2) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND-y)*(1._REKIND-z) ! N2
+     ns(3) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND+y)*(1._REKIND-z) ! N3
+     ns(4) = 0.125_REKIND*(1._REKIND-x)*(1._REKIND+y)*(1._REKIND+z) ! N4
+     ns(5) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND-y)*(1._REKIND+z) ! N5
+     ns(6) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND-y)*(1._REKIND-z) ! N6
+     ns(7) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND+y)*(1._REKIND-z) ! N7
+     ns(8) = 0.125_REKIND*(1._REKIND+x)*(1._REKIND+y)*(1._REKIND+z) ! N8
+ELSE IF ( n == 3 ) THEN order ! Order 3
+
+END IF order ! End Conditional
+
+END SUBROUTINE shapex
+
+!---------------------------------------------------------------
+
+SUBROUTINE shapedx(dns, x, y, z, n)
+!
+! Calculates array containing the first derivatives of the full Lagrangian 
+! shape function (dns and dnxyz) at coordinate (x,y,z) of order n. This 
+! subroutine is limited 8-node and 20-node brick elements. The outputs 
+! are used to calculate the 3D Jacobian and the strain displacement matrix.
+!
+!      Date      Programmer   Description
+!  ------------ ------------ -----------------------------------
+!   09/18/2015   Rui Zhang                  Original Code
+!   03/01/2017   Hossein Pourmatin      Modified
+
+IMPLICIT NONE
+
+INTEGER :: ii, jj, kk, ll ! Counter
+INTEGER, INTENT(IN) :: n  ! Order shape function
+REAL(kind=REKIND), INTENT(IN) :: x  ! X-coordinate
+REAL(kind=REKIND), INTENT(IN) :: y  ! Y-coordinate
+REAL(kind=REKIND), INTENT(IN) :: z  ! Z-coordinate
+REAL(kind=REKIND), INTENT(OUT), DIMENSION(n**3, 3) :: dns ! 3D Shape functions
+order: IF ( n == 2 ) THEN ! 8-node brick element
+     dns(1, 1) = -0.125_REKIND*(1._REKIND-y)*(1._REKIND+z) ! dN1dx
+     dns(2, 1) = -0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN2dx
+     dns(3, 1) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN3dx
+     dns(4, 1) = -0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN4dx
+     dns(5, 1) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND+z) ! dN5dx
+     dns(6, 1) =  0.125_REKIND*(1._REKIND-y)*(1._REKIND-z) ! dN6dx
+     dns(7, 1) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND-z) ! dN7dx
+     dns(8, 1) =  0.125_REKIND*(1._REKIND+y)*(1._REKIND+z) ! dN8dx
+     dns(1, 2) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN1dy
+     dns(2, 2) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND-z) ! dN2dy
+     dns(3, 2) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-z) ! dN3dy
+     dns(4, 2) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+z) ! dN4dy
+     dns(5, 2) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN5dy
+     dns(6, 2) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN6dy
+     dns(7, 2) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-z) ! dN7dy
+     dns(8, 2) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+z) ! dN8dy
+     dns(1, 3) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN1dz
+     dns(2, 3) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND-y) ! dN2dz
+     dns(3, 3) = -0.125_REKIND*(1._REKIND-x)*(1._REKIND+y) ! dN3dz
+     dns(4, 3) =  0.125_REKIND*(1._REKIND-x)*(1._REKIND+y) ! dN4dz
+     dns(5, 3) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN5dz
+     dns(6, 3) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND-y) ! dN6dz
+     dns(7, 3) = -0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN7dz
+     dns(8, 3) =  0.125_REKIND*(1._REKIND+x)*(1._REKIND+y) ! dN8dz
+ELSE IF ( n == 3 ) THEN order ! 20-node brick element
+     
+END IF order ! End conditional
+
+END SUBROUTINE shapedx
 
 !---------------------------------------------------------------
 
