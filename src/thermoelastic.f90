@@ -31,8 +31,13 @@ DO ii = 1, mpi_ne
                     idx = 2*nn + nodes(jj)
                     temp = temp + ns(l, jj) * tempst(idx)
                 ENDDO
-                ym((ii-1)*ngpe+l) = ym0 - 1.6*(temp-Tref)-0.1*(temp-Tref)*(temp-Tref)
-                nu((ii-1)*ngpe+l) = nu0 + 5.e-5*(temp-Tref)
+                IF (temp .GE. 0._REKIND) THEN
+                    ym((ii-1)*ngpe+l) = ym0 - 1.6*(temp-Tref)-0.1*(temp-Tref)*(temp-Tref)
+                    nu((ii-1)*ngpe+l) = nu0 + 5.e-5*(temp-Tref)
+                ELSE
+                    ym((ii-1)*ngpe+l) = ym0
+                    nu((ii-1)*ngpe+l) = nu0
+                ENDIF
             ENDDO
         ENDDO
     ENDDO

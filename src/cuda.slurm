@@ -8,7 +8,7 @@
 #SBATCH -p gpu	 		# Queue name
 #SBATCH -N 4               	# Total number of nodes requested
 #SBATCH -n 4              	# Total number of mpi tasks requested
-#SBATCH -t 02:00:00        	# Run time (hh:mm:ss)
+#SBATCH -t 24:00:00        	# Run time (hh:mm:ss)
 
 
 

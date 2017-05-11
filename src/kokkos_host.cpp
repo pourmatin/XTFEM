@@ -5,6 +5,24 @@
 /* Thu July 21 2016  */
 /* Developed by Hossein Pourmatin @ UTD for XTFEM 3D */
 
+extern "C" {
+    
+    /*void kokkos_init_(int& argc, char* argv[], int len) {
+        Kokkos::initialize(argc, argv);
+    }*/
+
+    void kokkos_init_() {
+        Kokkos::InitArguments args;
+        // 12 (CPU) threads per NUMA region
+        args.num_threads = 1;
+        args.device_id = 0;
+        Kokkos::initialize(args);
+    }
+    
+    void kokkos_finish_() {
+        Kokkos::finalize ();
+    }
+}
 // Type of a one-dimensional length-N array of int.
 
 typedef Kokkos::View<int*> view_1D_int;

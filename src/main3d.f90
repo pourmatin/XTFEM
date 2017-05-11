@@ -103,7 +103,6 @@ REAL(KIND=REKIND), DIMENSION(:), ALLOCATABLE ::vv, ve
 INTEGER :: im_t, maxits_t
 REAL(KIND=REKIND) :: eps_t
 ! Time-loop
-REAL(KIND=REKIND) :: angvel_t
 REAL(KIND=REKIND), DIMENSION(3) :: fextc_t
 REAL(KIND=REKIND), DIMENSION(:), ALLOCATABLE :: tempst, fextst_t, fBound, fInit
 ! MUMPS
@@ -177,33 +176,32 @@ ncmp    = 6             ! Number of components in stress/strain tensor
 nnse    = 8              ! Number of nodes per spatial element
 ngpe    = 8              ! Number of Gauss points per spatial element
 ! Time step
-dt0     = 0.005_REKIND   ! Step time
-nstep   = 300            ! Number of steps
+dt0     = 0.05_REKIND   ! Step time
+nstep   = 300000            ! Number of steps
 n1      = 10           ! Initial time step (cycle)
 n2      = 1            ! Time step after crack initiation (cycle)
 nipc    = 256           ! Number of temporal interpolation points per cycle
 ! Applid load
-p0      = 0._REKIND       ! Pressure amplitude (Traction load)
+p0      = 70._REKIND       ! Pressure amplitude (Traction load)
 freq_m    = 20._REKIND    ! Frequency, in Hz
 angvel_m  = 2._REKIND*pi*freq_m
 ! Applid heat flux
-q0      = 0._REKIND   ! uniformly distributed heat flux W/mm^2
+q0      = -0.3_REKIND   ! uniformly distributed heat flux W/mm^2
 freq_t    = 0.0_REKIND    ! Frequency, in Hz
-angvel_t  = 2._REKIND*pi*freq_t
-area    = 20._REKIND    ! Traction area mm^2
-T0      = 200._REKIND      ! Boundary temprature
+area    = 50._REKIND    ! Traction area mm^2
+T0      = 0._REKIND      ! Boundary temprature
 Tref    = 0._REKIND      ! Reference tempereture
 ! Linear system solver
-im_m      = 1000                      ! GMRES: size of Krylov subspace
+im_m      = 100                      ! GMRES: size of Krylov subspace
 eps_m     = 1.d-10               ! GMRES: tolerance for stopping criterion
-maxits_m  = 5000                   ! GMRES: maximum number of iterations allowed
+maxits_m  = 500                   ! GMRES: maximum number of iterations allowed
 iout    = 40                          ! GMRES: solution info output file number
 ! Linear system solver
-im_t      = 1000            ! GMRES: size of Krylov subspace 
+im_t      = 100            ! GMRES: size of Krylov subspace 
 eps_t     = 1.d-10         ! GMRES: tolerance for stopping criterion
-maxits_t  = 5000            ! GMRES: maximum number of iterations allowed 
+maxits_t  = 500            ! GMRES: maximum number of iterations allowed 
 ! Post-processing
-nout    = 5             ! Output frequency
+nout    = 100             ! Output frequency
 
 IF (MPI_ID .EQ. ROOT) THEN
 !-------------------------------------------------------------------------------
@@ -432,7 +430,7 @@ ALLOCATE(fixedbcst_t(ndofst_t), fixedbcst0_t(ndofst_t))
 fixedbcst_t = 0
 fixedbcst0_t = 0
 DO ii = 1, nn
-    IF (xcoord(ii,3) .EQ. 1._REKIND .OR. xcoord(ii,3) .EQ. 10*le) THEN ! y = 0
+    IF (xcoord(ii,3) .EQ. 1._REKIND) THEN ! y = 0
         DO jj = 1, nnte
             DO kk = 1, ndofn_t
                 fixedbcst_t( (ii-1)*ndofn_t+(jj-1)*ndof_t+kk ) = 1
@@ -462,7 +460,7 @@ DO ii = 1, ne
     ENDDO
 ENDDO
 DO ii = 1, nn
-    IF (xcoord(ii, 3) .EQ. le) THEN
+    IF (xcoord(ii, 3) .EQ. 2.) THEN
         ntele_t = ntele_t + nodeshare_t(ii)
     ENDIF
 ENDDO
@@ -472,7 +470,7 @@ rext_t = 0._REKIND
 DO ii = 1, ne
     DO jj = 1, nnse
         kk = xconn(ii,jj)
-        IF (xcoord(kk, 3) .EQ. le) THEN ! z = 130
+        IF (xcoord(kk, 3) .EQ. 2. .OR. xcoord(kk, 3) .EQ. 0.) THEN ! z = 130
             rext_t(kk*ndofn_t-0) = rext_t(kk*ndofn_t-0) + fnode_t
         ENDIF
     ENDDO
@@ -484,10 +482,22 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
 ALLOCATE(fixedbcst_m(ndofst_m), fixedbcst0_m(ndofst_m))
 fixedbcst_m = 0
 DO ii = 1, nn
-    IF (xcoord(ii,3) .EQ. 0._REKIND .OR. xcoord(ii,3) .EQ. 10*le) THEN ! y = 0
+    IF (xcoord(ii,2) .EQ. 0._REKIND .OR. xcoord(ii,2) .EQ. le) THEN ! y = 0
+        DO jj = 1, 2*nnte
+            fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
+                & = [0, 1, 0]
+        ENDDO
+    ENDIF
+
+    IF (xcoord(ii,3) .EQ. 0._REKIND .AND. xcoord(ii,2) .EQ. 0._REKIND .AND. xcoord(ii,1) .EQ. 0._REKIND) THEN ! y = 0
         DO jj = 1, 2*nnte
             fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
                 & = [1, 1, 1]
+        ENDDO
+    ELSEIF (xcoord(ii,3) .EQ. 0._REKIND .AND. xcoord(ii,2) .EQ. 0._REKIND .AND. xcoord(ii,1) .EQ. 5._REKIND) THEN ! y = 0
+        DO jj = 1, 2*nnte
+            fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
+                & = [0, 1, 1]
         ENDDO
     ENDIF
 ENDDO
@@ -514,8 +524,8 @@ rext_m = 0._REKIND
 DO ii = 1, ne
     DO jj = 1, nnse
         kk = xconn(ii,jj)
-        IF (xcoord(kk, 3) .EQ. le) THEN ! y = 10
-            rext_m(kk*3-0) = rext_m(kk*3-0) + fnode_m
+        IF (xcoord(kk, 2) .EQ. le) THEN ! y = 10
+            rext_m(kk*3-1) = rext_m(kk*3-1) + fnode_m
         ENDIF
     ENDDO
 ENDDO
@@ -530,281 +540,15 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
 !-------------------------------------------------------------------------------
 ! CALL MUMPS
 !-------------------------------------------------------------------------------
-! MUMPS: initialize, JOB = -1
 IF (MPI_ID .EQ. ROOT) THEN
     CALL CPU_TIME(tcpu(3,1))
     !$ tusr(3,1) = omp_get_wtime()
     PRINT *,''
     PRINT *, '>>> MUMPS analysis and factorize'
 ENDIF
-CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
-mumps_par_t%COMM = MPI_COMM_WORLD
-mumps_par_t%JOB = -1
-mumps_par_t%SYM = 2 ! 0 unsymmetric, 1 SPD, 2 general symmetric
-mumps_par_t%PAR = 1 ! 0 host not work, 1 host work
-!CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-CALL DMUMPS(mumps_par_t)
-IF (mumps_par_t%INFOG(1).LT.0) THEN
-    WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-        & "  mumps_par%INFOG(1)= ", mumps_par_t%INFOG(1), &
-        & "  mumps_par%INFOG(2)= ", mumps_par_t%INFOG(2) 
-    GOTO 1500
-ENDIF
-IF (MPI_ID .EQ. ROOT) THEN
-    OPEN(UNIT=120, FILE='MUMPS_errmsg.log', STATUS='unknown')
-    OPEN(UNIT=125, FILE='MUMPS_digmsg.log', STATUS='unknown')
-    OPEN(UNIT=130, FILE='MUMPS_glbmsg.log', STATUS='unknown')
-ENDIF
-CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
-! output stream for error messages
-mumps_par_t%ICNTL(1) = 120 ! <=0 suppressed
-! output stream for diagnostic printing, statistics, warning messages
-mumps_par_t%ICNTL(2) = 0 ! <=0 suppressed
-! output stream for global information
-mumps_par_t%ICNTL(3) = 130 ! <=0 suppressed
-! level of printing for error, warning and diagnostic messages
-mumps_par_t%ICNTL(4) = 2
-! using METIS for ordering
-mumps_par_t%ICNTL(7) = 5
-! percentage increase in the estimated working space
-mumps_par_t%ICNTL(14) = 60
-! Out-of-core mode
-!mumps_par%ICNTL(22) = 1 ! Out of core
-!mumps_par%OOC_TMPDIR = 'ooc'
-!mumps_par%OOC_PREFIX = 'ooc'
-
-IF (MPI_P .EQ. 1) THEN
-    IF (MPI_ID .EQ. ROOT) THEN
-!-------------------------------------------------------------------------------
-! MUMPS: define problem on host thread
-!-------------------------------------------------------------------------------
-        mumps_par_t%N = ndof_t
-        kk = 0
-        DO ii = 1, ndof_t
-            DO jj = ki_t(ii), ki_t(ii+1)-1
-                IF (ii .GE. kj_t(jj)) THEN
-                    kk = kk + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        mumps_par_t%NZ = kk
-        ALLOCATE(mumps_par_t%IRN(mumps_par_t%NZ))
-        ALLOCATE(mumps_par_t%JCN(mumps_par_t%NZ))
-        ALLOCATE(mumps_par_t%A(mumps_par_t%NZ))
-        ALLOCATE(mumps_par_t%RHS(ndofst_t))
-        kk = 1
-        DO ii = 1, ndof_t
-            DO jj = ki_t(ii), ki_t(ii+1)-1
-                IF (ii .GE. kj_t(jj)) THEN
-                    mumps_par_t%IRN(kk) = ii
-                    mumps_par_t%JCN(kk) = kj_t(jj)
-                    mumps_par_t%A(kk) = kv_t(jj)
-                    kk = kk + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        mumps_par_t%NRHS = nnte         ! Multiple RHS
-        mumps_par_t%LRHS = mumps_par_t%N    ! >= N
-    ENDIF
-ELSE
-!-------------------------------------------------------------------------------
-! MUMPS: define problem on all threads
-!-------------------------------------------------------------------------------
-    ! distribution of input matrix
-    mumps_par_t%ICNTL(18) = 3
-    mumps_par_t%N = ndof_t
-    kk = 0
-    DO ii = 1, ndof_t
-        DO jj = ki_t(ii), ki_t(ii+1)-1
-            IF (ii .GE. kj_t(jj)) THEN
-                kk = kk + 1
-            ENDIF
-        ENDDO
-    ENDDO
-    mumps_par_t%NZ_loc = kk
-    ALLOCATE(mumps_par_t%IRN_loc(mumps_par_t%NZ_loc))
-    ALLOCATE(mumps_par_t%JCN_loc(mumps_par_t%NZ_loc))
-    ALLOCATE(mumps_par_t%A_loc(mumps_par_t%NZ_loc))
-    kk = 1
-    DO ii = 1, ndof_t
-        DO jj = ki_t(ii), ki_t(ii+1)-1
-            IF (ii .GE. kj_t(jj)) THEN
-                mumps_par_t%IRN_loc(kk) = ii
-                mumps_par_t%JCN_loc(kk) = kj_t(jj)
-                mumps_par_t%A_loc(kk) = kv_t(jj)
-                kk = kk + 1
-            ENDIF
-        ENDDO
-    ENDDO
-    IF (MPI_ID .EQ. ROOT) THEN
-        ALLOCATE(mumps_par_t%RHS(ndofst_t))
-        mumps_par_t%NRHS = nnte         ! Multiple RHS
-        mumps_par_t%LRHS = mumps_par_t%N    ! >= N
-    ENDIF
-ENDIF
-!-------------------------------------------------------------------------------
-! MUMPS: analysis, JOB = 1
-!-------------------------------------------------------------------------------
-mumps_par_t%JOB = 1
+CALL mumps_solver(mumps_par_t, ROOT, MPI_ID, MPI_P, ndof_t, ndofst_t, nnte, ki_t, kj_t, kv_t, 0)
+CALL mumps_solver(mumps_par_m, ROOT, MPI_ID, MPI_P, ndof_m, ndofst_m, 2*nnte, ki_m, kj_m, kv_m, 0)
 CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-CALL DMUMPS(mumps_par_t)
-IF (mumps_par_t%INFOG(1).LT.0) THEN
-    WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-        &   "  mumps_par%INFOG(1)= ", mumps_par_t%INFOG(1), &
-        &   "  mumps_par%INFOG(2)= ", mumps_par_t%INFOG(2) 
-    GOTO 1500
-ENDIF
-IF (MPI_ID .EQ. ROOT) THEN
-    !PRINT *, 'MUMPS analysis ... done'
-ENDIF
-!-------------------------------------------------------------------------------
-! MUMPS: factorize, JOB = 2
-!-------------------------------------------------------------------------------
-mumps_par_t%JOB = 2
-CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-CALL DMUMPS(mumps_par_t)
-IF (mumps_par_t%INFOG(1).LT.0) THEN
-    WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-        &   "  mumps_par%INFOG(1)= ", mumps_par_t%INFOG(1), &
-        &   "  mumps_par%INFOG(2)= ", mumps_par_t%INFOG(2) 
-    GOTO 1500
-ENDIF
-CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-!-------------------------------------------------------------------------------
-! CALL MUMPS
-!-------------------------------------------------------------------------------
-! MUMPS: initialize, JOB = -1
-mumps_par_m%COMM = MPI_COMM_WORLD
-mumps_par_m%JOB = -1
-mumps_par_m%SYM = 2 ! 0 unsymmetric, 1 SPD, 2 general symmetric
-mumps_par_m%PAR = 1 ! 0 host not work, 1 host work
-!CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-CALL DMUMPS(mumps_par_m)
-IF (mumps_par_m%INFOG(1).LT.0) THEN
-    WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-        & "  mumps_par%INFOG(1)= ", mumps_par_m%INFOG(1), &
-        & "  mumps_par%INFOG(2)= ", mumps_par_m%INFOG(2) 
-    GOTO 1500
-ENDIF
-IF (MPI_ID .EQ. ROOT) THEN
-    OPEN(UNIT=120, FILE='MUMPS_errmsg.log', STATUS='unknown')
-    OPEN(UNIT=125, FILE='MUMPS_digmsg.log', STATUS='unknown')
-    OPEN(UNIT=130, FILE='MUMPS_glbmsg.log', STATUS='unknown')
-ENDIF
-CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-! output stream for error messages
-mumps_par_m%ICNTL(1) = 120 ! <=0 suppressed
-! output stream for diagnostic printing, statistics, warning messages
-mumps_par_m%ICNTL(2) = 0 ! <=0 suppressed
-! output stream for global information
-mumps_par_m%ICNTL(3) = 130 ! <=0 suppressed
-! level of printing for error, warning and diagnostic messages
-mumps_par_m%ICNTL(4) = 2
-! using METIS for ordering
-mumps_par_m%ICNTL(7) = 5
-! percentage increase in the estimated working space
-mumps_par_m%ICNTL(14) = 60
-! Out-of-core mode
-!mumps_par%ICNTL(22) = 1 ! Out of core
-!mumps_par%OOC_TMPDIR = 'ooc'
-!mumps_par%OOC_PREFIX = 'ooc'
-
-IF (MPI_P .EQ. 1) THEN
-    IF (MPI_ID .EQ. ROOT) THEN
-!-------------------------------------------------------------------------------
-! MUMPS: define problem on host thread
-!-------------------------------------------------------------------------------
-        mumps_par_m%N = ndof_m
-        kk = 0
-        DO ii = 1, ndof_m
-            DO jj = ki_m(ii), ki_m(ii+1)-1
-                IF (ii .GE. kj_m(jj)) THEN
-                    kk = kk + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        mumps_par_m%NZ = kk
-        ALLOCATE(mumps_par_m%IRN(mumps_par_m%NZ))
-        ALLOCATE(mumps_par_m%JCN(mumps_par_m%NZ))
-        ALLOCATE(mumps_par_m%A(mumps_par_m%NZ))
-        ALLOCATE(mumps_par_m%RHS(ndofst_m))
-        kk = 1
-        DO ii = 1, ndof_m
-            DO jj = ki_m(ii), ki_m(ii+1)-1
-                IF (ii .GE. kj_m(jj)) THEN
-                    mumps_par_m%IRN(kk) = ii
-                    mumps_par_m%JCN(kk) = kj_m(jj)
-                    mumps_par_m%A(kk) = kv_m(jj)
-                    kk = kk + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        mumps_par_m%NRHS = 2*nnte         ! Multiple RHS
-        mumps_par_m%LRHS = mumps_par_m%N    ! >= N
-    ENDIF
-ELSE
-!-------------------------------------------------------------------------------
-! MUMPS: define problem on all threads
-!-------------------------------------------------------------------------------
-    ! distribution of input matrix
-    mumps_par_m%ICNTL(18) = 3
-    mumps_par_m%N = ndof_m
-    kk = 0
-    DO ii = 1, ndof_m
-        DO jj = ki_m(ii), ki_m(ii+1)-1
-            IF (ii .GE. kj_m(jj)) THEN
-                kk = kk + 1
-            ENDIF
-        ENDDO
-    ENDDO
-    mumps_par_m%NZ_loc = kk
-    ALLOCATE(mumps_par_m%IRN_loc(mumps_par_m%NZ_loc))
-    ALLOCATE(mumps_par_m%JCN_loc(mumps_par_m%NZ_loc))
-    ALLOCATE(mumps_par_m%A_loc(mumps_par_m%NZ_loc))
-    kk = 1
-    DO ii = 1, ndof_m
-        DO jj = ki_m(ii), ki_m(ii+1)-1
-            IF (ii .GE. kj_m(jj)) THEN
-                mumps_par_m%IRN_loc(kk) = ii
-                mumps_par_m%JCN_loc(kk) = kj_m(jj)
-                mumps_par_m%A_loc(kk) = kv_m(jj)
-                kk = kk + 1
-            ENDIF
-        ENDDO
-    ENDDO
-    IF (MPI_ID .EQ. ROOT) THEN
-        ALLOCATE(mumps_par_m%RHS(ndofst_m))
-        mumps_par_m%NRHS = 2*nnte         ! Multiple RHS
-        mumps_par_m%LRHS = mumps_par_m%N    ! >= N
-    ENDIF
-ENDIF
-!-------------------------------------------------------------------------------
-! MUMPS: analysis, JOB = 1
-!-------------------------------------------------------------------------------
-mumps_par_m%JOB = 1
-CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-CALL DMUMPS(mumps_par_m)
-IF (mumps_par_m%INFOG(1).LT.0) THEN
-    WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-        &   "  mumps_par%INFOG(1)= ", mumps_par_m%INFOG(1), &
-        &   "  mumps_par%INFOG(2)= ", mumps_par_m%INFOG(2) 
-    GOTO 1500
-ENDIF
-IF (MPI_ID .EQ. ROOT) THEN
-    !PRINT *, 'MUMPS analysis ... done'
-ENDIF
-!-------------------------------------------------------------------------------
-! MUMPS: factorize, JOB = 2
-!-------------------------------------------------------------------------------
-mumps_par_m%JOB = 2
-CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-CALL DMUMPS(mumps_par_m)
-IF (mumps_par_m%INFOG(1).LT.0) THEN
-    WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-        &   "  mumps_par%INFOG(1)= ", mumps_par_m%INFOG(1), &
-        &   "  mumps_par%INFOG(2)= ", mumps_par_m%INFOG(2) 
-    GOTO 1500
-ENDIF
 IF (MPI_ID .EQ. ROOT) THEN
     !PRINT *, 'MUMPS factorize ... done'
     CALL CPU_TIME(tcpu(3,2))
@@ -841,7 +585,7 @@ itfail      = 0             ! > 0 if element(s) failed in current step, else 0
 gpsta       = 1             ! Gauss point status, 0 = failed, 1 = active
 elesta      = 1             ! Element status, 0 = failed, 1 = active
 dispst      = 0._REKIND     ! Solution vector
-tempst      = 0._REKIND     ! Solution vector
+tempst      = Tref          ! Solution vector
 tcoorde     = 0._REKIND
 fInit       = 0._REKIND
 fBound      = 0._REKIND
@@ -855,25 +599,8 @@ strain_pl   = 0._REKIND     ! Total plastic strain of last step
 sig_eff     = 0._REKIND     ! Effective stress of last step
 sig_back    = 0._REKIND     ! Backstress of last step
 
-! Assiagn initial boundary condition
-tempst = Tref
-DO ii = 1, nn
-    DO jj = 1, nnte
-        DO kk = 1, ndofn_t
-            !dispst( (ii-1)*ndofn+(jj-1)*ndof+kk ) = dispst( (ii-1)*ndofn+(jj-1)*ndof+kk ) + xcoord(ii,3)*(10-xcoord(ii,3))
-        ENDDO
-    ENDDO
-ENDDO
-
-
 ! Get S-T matrix coefficients
-ck_t = 0._REKIND
-cm_t = 0._REKIND
-cktn_t = 0._REKIND
-cmtn_t = 0._REKIND
-cktn1_t = 0._REKIND
-cmtn1_t = 0._REKIND
-CALL stcoeff_t(1, dt, angvel_t, ck_t, cm_t, cktn_t, cmtn_t, cktn1_t, cmtn1_t)
+CALL stcoeff_t(1, dt, ck_t, cm_t, cktn_t, cmtn_t, cktn1_t, cmtn1_t)
 CALL mpikronspgemv(ck_t+cktn_t, cm_t+cmtn_t, 1._REKIND, 1._REKIND, nnte, ki0, kj0, &
         & kv0, mi0, mj0, mv0, ndof_t, tempst, fInit)
 tempst = fixedbcst0_t
@@ -916,7 +643,8 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
         GOTO 1500
     ENDIF
     !PRINT *, 'ID = ', MPI_ID, 'ndf = ', ndf, 'nef = ', nef
-    IF (itfail .NE. 0) THEN     
+    IF (itfail .NE. 0) THEN
+        !EXIT
         ! Delete failed elements
         ! 1st step, delete the failed elements
         CALL delelement(nn, mpi_ne, ndofn_m, nnse, ngpe, ncmp, nquads, &
@@ -956,73 +684,7 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
         CALL csrapplybc(mi_m, mj_m, mv_m, ndof_m, mnz_m, fixedbcst_m(1:ndof_m))
         CALL csrapplybc(ki_m, kj_m, kv_m, ndof_m, knz_m, fixedbcst_m(1:ndof_m))
         ! 4th step, generate new preconditioner by MUMPS
-        !CALL mumps_solver(mumps_par_m, ROOT, MPI_ID, MPI_P, ndof_m, ndofst_m, 2*nnte, ki_m, kj_m, kv_m, tcpu, tusr)
-        ! 4.1 copy K matrix
-        k = 0
-        DO i = 1, ndof_m
-            DO j = ki_m(i), ki_m(i+1)-1
-                IF (i .GE. kj_m(j)) THEN
-                    k = k + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        IF (MPI_P .EQ. 1) THEN
-            mumps_par_m%NZ = k
-            !WRITE(*,*) 'NZ = ', K
-            DEALLOCATE(mumps_par_m%IRN, mumps_par_m%JCN, mumps_par_m%A)
-            ALLOCATE(mumps_par_m%IRN(mumps_par_m%NZ))
-            ALLOCATE(mumps_par_m%JCN(mumps_par_m%NZ))
-            ALLOCATE(mumps_par_m%A(mumps_par_m%NZ))
-            k = 1
-            DO i = 1, ndof_m
-                DO j = ki_m(i), ki_m(i+1)-1
-                    IF (i .GE. kj_m(j)) THEN
-                        mumps_par_m%IRN(k) = i
-                        mumps_par_m%JCN(k) = kj_m(j)
-                        mumps_par_m%A(k) = kv_m(j)
-                        k = k + 1
-                    ENDIF
-                ENDDO
-            ENDDO
-        ELSE
-            mumps_par_m%NZ_loc = k
-            !WRITE(*,*) 'NZ = ', K
-            DEALLOCATE(mumps_par_m%IRN_loc, mumps_par_m%JCN_loc, mumps_par_m%A_loc)
-            ALLOCATE(mumps_par_m%IRN_loc(mumps_par_m%NZ_loc))
-            ALLOCATE(mumps_par_m%JCN_loc(mumps_par_m%NZ_loc))
-            ALLOCATE(mumps_par_m%A_loc(mumps_par_m%NZ_loc))
-            k = 1
-            DO i = 1, ndof_m
-                DO j = ki_m(i), ki_m(i+1)-1
-                    IF (i .GE. kj_m(j)) THEN
-                        mumps_par_m%IRN_loc(k) = i
-                        mumps_par_m%JCN_loc(k) = kj_m(j)
-                        mumps_par_m%A_loc(k) = kv_m(j)
-                        k = k + 1
-                    ENDIF
-                ENDDO
-            ENDDO 
-        ENDIF
-	! 4.2 analysis
-        mumps_par_m%JOB = 1
-        !CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-        CALL DMUMPS(mumps_par_m)
-        IF (mumps_par_m%INFOG(1).LT.0) THEN
-            WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-                &   "  mumps_par%INFOG(1)= ", mumps_par_m%INFOG(1), &
-                &   "  mumps_par%INFOG(2)= ", mumps_par_m%INFOG(2) 
-            GOTO 1500
-        ENDIF
-        ! 4.3 factorize
-        mumps_par_m%JOB = 2
-        !CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-        CALL DMUMPS(mumps_par_m)
-        IF (mumps_par_m%INFOG(1).LT.0) THEN
-            WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-                &   "  mumps_par%INFOG(1)= ", mumps_par_m%INFOG(1), &
-                &   "  mumps_par%INFOG(2)= ", mumps_par_m%INFOG(2) 
-            GOTO 1500
-        ENDIF
+        CALL mumps_solver(mumps_par_m, ROOT, MPI_ID, MPI_P, ndof_m, ndofst_m, 2*nnte, ki_m, kj_m, kv_m, 1)
         ! Reduce time step
         dt = dt0*n2
         nip = nipc*n2
@@ -1042,7 +704,7 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
     ELSE
        fextst_t = 0._REKIND
     ENDIF
-    CALL getfextc_t(ii, angvel_t, dt, fextc_t)
+    CALL getfextc_t(ii, dt, fextc_t)
     kk = 0
     ll = 1 - ndof_t
     DO jj = 1, nnte
@@ -1052,7 +714,7 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
         fextst_t(ll:kk) = fextst_t(ll:kk) + fextc_t(jj)*rext_t
     ENDDO 
     ! Use KRONSPGEMV perform spgemv
-    CALL stcoeff_t(ii, dt, angvel_t, ck_t, cm_t, cktn_t, cmtn_t, cktn1_t, cmtn1_t)
+    CALL stcoeff_t(ii, dt, ck_t, cm_t, cktn_t, cmtn_t, cktn1_t, cmtn1_t)
     CALL mpikronspgemv(cktn1_t, cmtn1_t, 1._REKIND, 1._REKIND, nnte, ki_t, kj_t, &
         & kv_t, mi_t, mj_t, mv_t, ndof_t, tempst, fextst_t)
     fextst_t = fextst_t + fBound
@@ -1118,71 +780,7 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
     ! Apply BC to K and M matrices
     CALL csrapplybc(ki_m, kj_m, kv_m, ndof_m, knz_m, fixedbcst_m(1:ndof_m))
     CALL csrapplybc(mi_m, mj_m, mv_m, ndof_m, mnz_m, fixedbcst_m(1:ndof_m))
-        k = 0
-        DO i = 1, ndof_m
-            DO j = ki_m(i), ki_m(i+1)-1
-                IF (i .GE. kj_m(j)) THEN
-                    k = k + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        IF (MPI_P .EQ. 1) THEN
-            mumps_par_m%NZ = k
-            !WRITE(*,*) 'NZ = ', K
-            DEALLOCATE(mumps_par_m%IRN, mumps_par_m%JCN, mumps_par_m%A)
-            ALLOCATE(mumps_par_m%IRN(mumps_par_m%NZ))
-            ALLOCATE(mumps_par_m%JCN(mumps_par_m%NZ))
-            ALLOCATE(mumps_par_m%A(mumps_par_m%NZ))
-            k = 1
-            DO i = 1, ndof_m
-                DO j = ki_m(i), ki_m(i+1)-1
-                    IF (i .GE. kj_m(j)) THEN
-                        mumps_par_m%IRN(k) = i
-                        mumps_par_m%JCN(k) = kj_m(j)
-                        mumps_par_m%A(k) = kv_m(j)
-                        k = k + 1
-                    ENDIF
-                ENDDO
-            ENDDO
-        ELSE
-            mumps_par_m%NZ_loc = k
-            !WRITE(*,*) 'NZ = ', K
-            DEALLOCATE(mumps_par_m%IRN_loc, mumps_par_m%JCN_loc, mumps_par_m%A_loc)
-            ALLOCATE(mumps_par_m%IRN_loc(mumps_par_m%NZ_loc))
-            ALLOCATE(mumps_par_m%JCN_loc(mumps_par_m%NZ_loc))
-            ALLOCATE(mumps_par_m%A_loc(mumps_par_m%NZ_loc))
-            k = 1
-            DO i = 1, ndof_m
-                DO j = ki_m(i), ki_m(i+1)-1
-                    IF (i .GE. kj_m(j)) THEN
-                        mumps_par_m%IRN_loc(k) = i
-                        mumps_par_m%JCN_loc(k) = kj_m(j)
-                        mumps_par_m%A_loc(k) = kv_m(j)
-                        k = k + 1
-                    ENDIF
-                ENDDO
-            ENDDO 
-        ENDIF
-        ! 4.2 analysis
-        mumps_par_m%JOB = 1
-        !CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-        CALL DMUMPS(mumps_par_m)
-        IF (mumps_par_m%INFOG(1).LT.0) THEN
-            WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-                &   "  mumps_par%INFOG(1)= ", mumps_par_m%INFOG(1), &
-                &   "  mumps_par%INFOG(2)= ", mumps_par_m%INFOG(2)
-            GOTO 1500
-        ENDIF
-        ! 4.3 factorize
-        mumps_par_m%JOB = 2
-        !CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
-        CALL DMUMPS(mumps_par_m)
-        IF (mumps_par_m%INFOG(1).LT.0) THEN
-            WRITE(*,'(A,A,I6,A,I9)') " ERROR RETURN: ", &
-                &   "  mumps_par%INFOG(1)= ", mumps_par_m%INFOG(1), &
-                &   "  mumps_par%INFOG(2)= ", mumps_par_m%INFOG(2)
-            GOTO 1500
-        ENDIF
+    CALL mumps_solver(mumps_par_m, ROOT, MPI_ID, MPI_P, ndof_m, ndofst_m, 2*nnte, ki_m, kj_m, kv_m, 1)
     !----------------------------
     !   SOLVE THE MECHANICAL PART
     !----------------------------
@@ -1215,12 +813,6 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
         fextst_m(ll:kk) = fextc_m(jj)*rext_m + fint_m(jj)*vv
     ENDDO 
     ! Get S-T matrix coefficients
-    ck_m = 0._REKIND
-    cm_m = 0._REKIND
-    cktn_m = 0._REKIND
-    cmtn_m = 0._REKIND
-    cktn1_m = 0._REKIND
-    cmtn1_m = 0._REKIND     
     CALL stcoeff_m(ii, dt, angvel_m, ck_m, cm_m, cktn_m, cmtn_m, cktn1_m, cmtn1_m)
     ! Use KRONSPGEMV perform spgemv
     CALL mpikronspgemv(cktn1_m, cmtn1_m, 1._REKIND, 1._REKIND, 2*nnte, ki_m, kj_m, &
@@ -1285,10 +877,10 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
         GOTO 1500
     ENDIF
     CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
-    !CALL kokkos_damage(MPI_ID, job, mpi_ne, nn, ndofn_m, nnse, nnte, ngpe, &
-    !        & ncmp, nip, xconn(mpi_ele,:), Nx, Ny, Nz, ym, nu, angvel_m, &
-    !        & tcoorde, dispst, gpsta, strain_tgo, strain_pl, sig_eff, &
-    !        & sig_back, p, D, ws, del_po, sig_D)
+    CALL kokkos_damage(MPI_ID, job, mpi_ne, nn, ndofn_m, nnse, nnte, ngpe, &
+            & ncmp, nip, xconn(mpi_ele,:), Nx, Ny, Nz, ym, nu, angvel_m, &
+            & tcoorde, dispst, gpsta, strain_tgo, strain_pl, sig_eff, &
+            & sig_back, p, D, ws, del_po, sig_D)
     CALL MPI_Barrier(MPI_COMM_WORLD, MPI_IERR)
     IF (MPI_IERR .NE. 0) THEN
         PRINT *, 'MPI_Barrier error = ',  MPI_IERR
@@ -1297,13 +889,13 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
     !PRINT *, 'ID = ', MPI_ID, 'max(D) = ', maxval(D)
     dmax = 0._REKIND
     wsmax = 0._REKIND
-    CALL MPI_REDUCE(MAXVAL(D), dmax, 1, MPI_REAL8, MPI_MAX, ROOT, &
+    CALL MPI_ALLREDUCE(MAXVAL(D), dmax, 1, MPI_REAL8, MPI_MAX, &
         & MPI_COMM_WORLD, MPI_IERR)
     IF (MPI_IERR .NE. 0) THEN
         PRINT *, 'MPI_REDUCE error = ',  MPI_IERR
         GOTO 1500
     ENDIF
-    CALL MPI_REDUCE(MAXVAL(ws), wsmax, 1, MPI_REAL8, MPI_MAX, ROOT, &
+    CALL MPI_ALLREDUCE(MAXVAL(ws), wsmax, 1, MPI_REAL8, MPI_MAX, &
         & MPI_COMM_WORLD, MPI_IERR)
     IF (MPI_IERR .NE. 0) THEN
         PRINT *, 'MPI_REDUCE error = ',  MPI_IERR
@@ -1338,9 +930,9 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
         IF ((MOD(ii, 50) .EQ. 1) .OR. (ii .EQ. 1))  THEN
             WRITE(*,*) ''
             WRITE(*,110) 'STEP', 'TIME', 'SOLVER', 'DAMAGE', 'RMELE', & 
-                & 'POSTPR', 'min(U)', 'max(U)', 'min(T)', 'max(T)'
+                & 'POSTPR', 'mas(Ws)', 'max(D)', 'min(T)', 'max(T)'
         ENDIF
-        WRITE(*,115) ii, tcoorde(nnte), tusr(4:7,3), Umin, Umax, Tmin, Tmax
+        WRITE(*,115) ii, tcoorde(nnte), tusr(4:7,3), wsmax, dmax, Tmin, Tmax
     ENDIF
 ENDDO
 ! Clear memory and exit
@@ -1407,7 +999,7 @@ CALL kokkos_finish()
 CALL MPI_Finalize (MPI_IERR)
 ! FORMATS
 100   FORMAT(A35, 9X, I16)
-105   FORMAT(A32, 8X, F16.2)
+105   FORMAT(A35, 9X, F16.2)
 110   FORMAT(A8,2X,9(A8, 2X))
 115   FORMAT(I8,2X,F8.1,2X,6(F8.2,2X),2(F10.2))
 END PROGRAM main3d

@@ -1,4 +1,4 @@
-SUBROUTINE stcoeff_t(t1, dt, w, k, m, ktn, mtn, ktn1, mtn1)
+SUBROUTINE stcoeff_t(t1, dt, k, m, ktn, mtn, ktn1, mtn1)
 ! Exact temporal shape function integration by Mathematica
 !   k = stiffness matrix of the complete slab
 !   m = mass matrix of the complete slab 
@@ -11,7 +11,7 @@ SUBROUTINE stcoeff_t(t1, dt, w, k, m, ktn, mtn, ktn1, mtn1)
 USE kinds
 IMPLICIT NONE
 ! ---External variables---
-REAL(KIND=REKIND), INTENT(IN) :: t1, dt, w
+REAL(KIND=REKIND), INTENT(IN) :: t1, dt
 REAL(KIND=REKIND), DIMENSION(3, 3), INTENT(OUT) :: k, m, ktn, mtn, ktn1, mtn1
 ! ---Internal variables---
 INTEGER :: i, j

@@ -63,7 +63,7 @@ SCADIR = $(LIBDIR)/scalapack-2.0.2
 BLASDIR = $(LIBDIR)/BLAS-3.6.0
 LAPDIR = $(LIBDIR)/lapack-3.6.1
 MPIDIR = /opt/apps/gcc4_9/mvapich2/2.1/lib
-FEMDIR = $(WORKDIR)/Thermal/XTFEM-Thermal
+FEMDIR = $(WORKDIR)/Thermal/XTFEM
 SRCDIR = $(FEMDIR)/src
 MESHDIR = $(FEMDIR)/inp
 BACKUPDIR = $(FEMDIR)/backup
@@ -74,7 +74,7 @@ OOCDIR = $(TEMPDIR)/ooc
 # MESHFILE = prismaticrod-2025-1536.inp
 # MESHFILE = prismaticrod-3751-3000.inp
 # MESHFILE = prismaticrod-26901-24000.inp
-# MESHFILE = sent_c3d8_1824_2435.inp
+ MESHFILE = sent_c3d8_1824_2435.inp
 # MESHFILE = sent_c3d8_9380_10934.inp
 # MESHFILE = sent_c3d8_20658_18160.inp
 # MESHFILE = sent_c3d8_48516_45100.inp
@@ -91,7 +91,7 @@ OOCDIR = $(TEMPDIR)/ooc
 # MESHFILE = panel98114_47923.inp
 #MESHFILE = rod6171_5000.inp
 #MESHFILE = rod4851_4000.inp
-MESHFILE = rod525_320.inp
+#MESHFILE = rod525_320.inp
 #MESHFILE = rod99_40.inp
 #MESHFILE = rod1.inp
 #MESHFILE = rod5025_3200.inp
@@ -243,7 +243,7 @@ OBJS += ilut.f kronecker.o kronecker_mumps.o mumps.o
 # MPI
 OBJS += mpisubs.o
 # post-process and damage
-OBJS += postprocess.o kokkos_damage.o kokkos_host.o initialize_kokkos.o
+OBJS += postprocess.o kokkos_damage.o kokkos_host.o
 # element deletion
 OBJS += delelement.o
 # adddiagonal.o
