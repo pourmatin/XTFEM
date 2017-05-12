@@ -17,7 +17,7 @@ IMPLICIT NONE
 INCLUDE 'mpif.h'
 INCLUDE 'dmumps_struc.h'
 ! Parameters
-REAL(KIND=REKIND) :: kappa, cp, rho, ym0, nu0, le, area, alpha
+REAL(KIND=REKIND) :: kappa, cp, rho, ym0, nu0, le, area_m, area_t, alpha
 INTEGER :: ne, nn, nnsd, nnte, nquads, nquadt, nnse, ngp, ngpe, ncmp, n1, n2
 REAL(KIND=REKIND) :: dt, dt0
 INTEGER :: nstep, nip, nipc, nout
@@ -83,7 +83,7 @@ TYPE (DMUMPS_STRUC) mumps_par_m
 
 ! Temperature Parameters
 INTEGER :: ndofn_t, ndof_t, ndofst_t
-REAL(KIND=REKIND) :: q0, freq_t
+REAL(KIND=REKIND) :: q0
 ! Shape functions
 REAL(KIND=REKIND), DIMENSION(:,:), ALLOCATABLE :: ns_t
 REAL(KIND=REKIND), DIMENSION(:,:,:), ALLOCATABLE :: dns_t
@@ -164,7 +164,7 @@ dat     = TRIM(job)//'.dat'
 WRITE(temp,'(i8)') MPI_ID
 mpi_job = TRIM(job)//'_'//TRIM(ADJUSTL(temp))
 ! Geometry
-le      = 10._REKIND    ! Height of the plate (loading side)
+le      = 130._REKIND    ! Height of the plate (loading side)
 ! Mesh
 ndofn_t = 1             ! Number of spatial degrees of freedom per node
 ndofn_m = 3
@@ -176,19 +176,19 @@ ncmp    = 6             ! Number of components in stress/strain tensor
 nnse    = 8              ! Number of nodes per spatial element
 ngpe    = 8              ! Number of Gauss points per spatial element
 ! Time step
-dt0     = 0.05_REKIND   ! Step time
-nstep   = 300000            ! Number of steps
-n1      = 10           ! Initial time step (cycle)
-n2      = 1            ! Time step after crack initiation (cycle)
+dt0     = 0.005_REKIND   ! Step time
+nstep   = 3000            ! Number of steps
+n1      = 100           ! Initial time step (cycle)
+n2      = 10            ! Time step after crack initiation (cycle)
 nipc    = 256           ! Number of temporal interpolation points per cycle
 ! Applid load
 p0      = 70._REKIND       ! Pressure amplitude (Traction load)
 freq_m    = 20._REKIND    ! Frequency, in Hz
 angvel_m  = 2._REKIND*pi*freq_m
+area_m  = 664._REKIND    ! Traction area mm^2
 ! Applid heat flux
-q0      = -0.3_REKIND   ! uniformly distributed heat flux W/mm^2
-freq_t    = 0.0_REKIND    ! Frequency, in Hz
-area    = 50._REKIND    ! Traction area mm^2
+q0      = 2._REKIND   ! uniformly distributed heat flux W/mm^2
+area_t  = 13000._REKIND    ! Heat flux area mm^2
 T0      = 0._REKIND      ! Boundary temprature
 Tref    = 0._REKIND      ! Reference tempereture
 ! Linear system solver
@@ -197,11 +197,11 @@ eps_m     = 1.d-10               ! GMRES: tolerance for stopping criterion
 maxits_m  = 500                   ! GMRES: maximum number of iterations allowed
 iout    = 40                          ! GMRES: solution info output file number
 ! Linear system solver
-im_t      = 100            ! GMRES: size of Krylov subspace 
+im_t      = 1000            ! GMRES: size of Krylov subspace 
 eps_t     = 1.d-10         ! GMRES: tolerance for stopping criterion
 maxits_t  = 500            ! GMRES: maximum number of iterations allowed 
 ! Post-processing
-nout    = 100             ! Output frequency
+nout    = 12             ! Output frequency
 
 IF (MPI_ID .EQ. ROOT) THEN
 !-------------------------------------------------------------------------------
@@ -430,7 +430,7 @@ ALLOCATE(fixedbcst_t(ndofst_t), fixedbcst0_t(ndofst_t))
 fixedbcst_t = 0
 fixedbcst0_t = 0
 DO ii = 1, nn
-    IF (xcoord(ii,3) .EQ. 1._REKIND) THEN ! y = 0
+    IF (xcoord(ii,3) .EQ. 0._REKIND .OR. xcoord(ii,3) .EQ. le ) THEN ! y = 0
         DO jj = 1, nnte
             DO kk = 1, ndofn_t
                 fixedbcst_t( (ii-1)*ndofn_t+(jj-1)*ndof_t+kk ) = 1
@@ -460,17 +460,17 @@ DO ii = 1, ne
     ENDDO
 ENDDO
 DO ii = 1, nn
-    IF (xcoord(ii, 3) .EQ. 2.) THEN
+    IF (xcoord(ii, 2) .EQ. 35.) THEN
         ntele_t = ntele_t + nodeshare_t(ii)
     ENDIF
 ENDDO
-ftotal_t = q0*area
+ftotal_t = q0*area_t
 fnode_t = ftotal_t/ntele_t
 rext_t = 0._REKIND
 DO ii = 1, ne
     DO jj = 1, nnse
         kk = xconn(ii,jj)
-        IF (xcoord(kk, 3) .EQ. 2. .OR. xcoord(kk, 3) .EQ. 0.) THEN ! z = 130
+        IF (xcoord(kk, 2) .EQ. 35. .OR. xcoord(kk, 2) .EQ. -35.) THEN ! z = 130
             rext_t(kk*ndofn_t-0) = rext_t(kk*ndofn_t-0) + fnode_t
         ENDIF
     ENDDO
@@ -482,24 +482,24 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
 ALLOCATE(fixedbcst_m(ndofst_m), fixedbcst0_m(ndofst_m))
 fixedbcst_m = 0
 DO ii = 1, nn
-    IF (xcoord(ii,2) .EQ. 0._REKIND .OR. xcoord(ii,2) .EQ. le) THEN ! y = 0
-        DO jj = 1, 2*nnte
-            fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
-                & = [0, 1, 0]
-        ENDDO
-    ENDIF
-
-    IF (xcoord(ii,3) .EQ. 0._REKIND .AND. xcoord(ii,2) .EQ. 0._REKIND .AND. xcoord(ii,1) .EQ. 0._REKIND) THEN ! y = 0
+    IF (xcoord(ii,3) .EQ. 0._REKIND .OR. xcoord(ii,3) .EQ. 10*le) THEN ! y = 0
         DO jj = 1, 2*nnte
             fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
                 & = [1, 1, 1]
         ENDDO
-    ELSEIF (xcoord(ii,3) .EQ. 0._REKIND .AND. xcoord(ii,2) .EQ. 0._REKIND .AND. xcoord(ii,1) .EQ. 5._REKIND) THEN ! y = 0
-        DO jj = 1, 2*nnte
-            fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
-                & = [0, 1, 1]
-        ENDDO
     ENDIF
+
+    !IF (xcoord(ii,3) .EQ. 0._REKIND .AND. xcoord(ii,2) .EQ. 0._REKIND .AND. xcoord(ii,1) .EQ. 0._REKIND) THEN ! y = 0
+    !    DO jj = 1, 2*nnte
+    !        fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
+    !            & = [1, 1, 1]
+    !    ENDDO
+    !ELSEIF (xcoord(ii,3) .EQ. 0._REKIND .AND. xcoord(ii,2) .EQ. 0._REKIND .AND. xcoord(ii,1) .EQ. 5._REKIND) THEN ! y = 0
+    !    DO jj = 1, 2*nnte
+    !        fixedbcst_m((ii-1)*ndofn_m+(jj-1)*ndof_m+1 : ii*ndofn_m+(jj-1)*ndof_m) &
+    !            & = [0, 1, 1]
+    !    ENDDO
+    !ENDIF
 ENDDO
 fixedbcst0_m = fixedbcst_m
 ! Apply BC to K and M matrices
@@ -518,14 +518,14 @@ DO ii = 1, nn
         ntele_m = ntele_m + nodeshare_m(ii)
     ENDIF
 ENDDO
-ftotal_m = p0*area
+ftotal_m = p0*area_m
 fnode_m = ftotal_m/ntele_m
 rext_m = 0._REKIND
 DO ii = 1, ne
     DO jj = 1, nnse
         kk = xconn(ii,jj)
-        IF (xcoord(kk, 2) .EQ. le) THEN ! y = 10
-            rext_m(kk*3-1) = rext_m(kk*3-1) + fnode_m
+        IF (xcoord(kk, 3) .EQ. le) THEN ! y = 10
+            rext_m(kk*3-0) = rext_m(kk*3-0) + fnode_m
         ENDIF
     ENDDO
 ENDDO
@@ -704,7 +704,7 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
     ELSE
        fextst_t = 0._REKIND
     ENDIF
-    CALL getfextc_t(ii, dt, fextc_t)
+    CALL getfextc_t(tcoorde(1), dt, fextc_t)
     kk = 0
     ll = 1 - ndof_t
     DO jj = 1, nnte
@@ -803,7 +803,7 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
     ! Calculate temporal component of external force vectors
     fextc_m = 0._REKIND
     fextst_m = 0._REKIND
-    CALL getfextc_m(ii, angvel_m, dt, fextc_m, fint_m)
+    CALL getfextc_m(tcoorde(1), angvel_m, dt, fextc_m, fint_m)
     kk = 0
     ll = 1 - ndof_m
     DO jj = 1, 2*nnte
@@ -930,7 +930,7 @@ CALL MPI_BARRIER(MPI_COMM_WORLD, MPI_IERR)
         IF ((MOD(ii, 50) .EQ. 1) .OR. (ii .EQ. 1))  THEN
             WRITE(*,*) ''
             WRITE(*,110) 'STEP', 'TIME', 'SOLVER', 'DAMAGE', 'RMELE', & 
-                & 'POSTPR', 'mas(Ws)', 'max(D)', 'min(T)', 'max(T)'
+                & 'POSTPR', 'max(Ws)', 'max(D)', 'min(T)', 'max(T)'
         ENDIF
         WRITE(*,115) ii, tcoorde(nnte), tusr(4:7,3), wsmax, dmax, Tmin, Tmax
     ENDIF

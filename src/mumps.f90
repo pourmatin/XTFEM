@@ -48,55 +48,54 @@ IF (job .EQ. 0) THEN
    mumps_par%ICNTL(7) = 5
    ! percentage increase in the estimated working space
    mumps_par%ICNTL(14) = 60
+   mumps_par%N = ndof
 ENDIF
+kk = 0
+DO ii = 1, ndof
+    DO jj = ki(ii), ki(ii+1)-1
+        IF (ii .GE. kj(jj)) THEN
+            kk = kk + 1
+        ENDIF
+    ENDDO
+ENDDO
 IF (MPI_P .EQ. 1) THEN
-    IF (MPI_ID .EQ. ROOT) THEN
 !-------------------------------------------------------------------------------
 ! MUMPS: define problem on host thread
 !-------------------------------------------------------------------------------
-        mumps_par%N = ndof
-        kk = 0
-        DO ii = 1, ndof
-            DO jj = ki(ii), ki(ii+1)-1
-                IF (ii .GE. kj(jj)) THEN
-                    kk = kk + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        mumps_par%NZ = kk
-        ALLOCATE(mumps_par%IRN(mumps_par%NZ))
-        ALLOCATE(mumps_par%JCN(mumps_par%NZ))
-        ALLOCATE(mumps_par%A(mumps_par%NZ))
-        ALLOCATE(mumps_par%RHS(ndofst))
-        kk = 1
-        DO ii = 1, ndof
-            DO jj = ki(ii), ki(ii+1)-1
-                IF (ii .GE. kj(jj)) THEN
-                    mumps_par%IRN(kk) = ii
-                    mumps_par%JCN(kk) = kj(jj)
-                    mumps_par%A(kk) = kv(jj)
-                    kk = kk + 1
-                ENDIF
-            ENDDO
-        ENDDO
-        mumps_par%NRHS = nnte         ! Multiple RHS
-        mumps_par%LRHS = mumps_par%N    ! >= N
-    ENDIF
+     mumps_par%NZ = kk
+     IF (job .EQ. 0) Then
+         ALLOCATE(mumps_par%RHS(ndofst))
+     ELSE
+         DEALLOCATE(mumps_par%IRN, mumps_par%JCN, mumps_par%A)
+     ENDIF
+     ALLOCATE(mumps_par%IRN(mumps_par%NZ))
+     ALLOCATE(mumps_par%JCN(mumps_par%NZ))
+     ALLOCATE(mumps_par%A(mumps_par%NZ))
+     kk = 1
+     DO ii = 1, ndof
+         DO jj = ki(ii), ki(ii+1)-1
+             IF (ii .GE. kj(jj)) THEN
+                 mumps_par%IRN(kk) = ii
+                 mumps_par%JCN(kk) = kj(jj)
+                 mumps_par%A(kk) = kv(jj)
+                 kk = kk + 1
+             ENDIF
+         ENDDO
+     ENDDO
+     IF (job .EQ. 0) Then
+         mumps_par%NRHS = nnte         ! Multiple RHS
+         mumps_par%LRHS = mumps_par%N    ! >= N
+     ENDIF
 ELSE
 !-------------------------------------------------------------------------------
 ! MUMPS: define problem on all threads
 !-------------------------------------------------------------------------------
     ! distribution of input matrix
-    mumps_par%ICNTL(18) = 3
-    mumps_par%N = ndof
-    kk = 0
-    DO ii = 1, ndof
-        DO jj = ki(ii), ki(ii+1)-1
-            IF (ii .GE. kj(jj)) THEN
-                kk = kk + 1
-            ENDIF
-        ENDDO
-    ENDDO
+    IF (job .EQ. 0) Then
+        mumps_par%ICNTL(18) = 3
+    ELSE
+        DEALLOCATE(mumps_par%IRN_loc, mumps_par%JCN_loc, mumps_par%A_loc)
+    ENDIF
     mumps_par%NZ_loc = kk
     ALLOCATE(mumps_par%IRN_loc(mumps_par%NZ_loc))
     ALLOCATE(mumps_par%JCN_loc(mumps_par%NZ_loc))
@@ -112,7 +111,7 @@ ELSE
             ENDIF
         ENDDO
     ENDDO
-    IF (MPI_ID .EQ. ROOT) THEN
+    IF (MPI_ID .EQ. ROOT .AND. job .EQ. 0) THEN
         ALLOCATE(mumps_par%RHS(ndofst))
         mumps_par%NRHS = nnte         ! Multiple RHS
         mumps_par%LRHS = mumps_par%N    ! >= N
@@ -129,9 +128,6 @@ IF (mumps_par%INFOG(1).LT.0) THEN
         &   "  mumps_par%INFOG(1)= ", mumps_par%INFOG(1), &
         &   "  mumps_par%INFOG(2)= ", mumps_par%INFOG(2) 
     !GOTO 1500
-ENDIF
-IF (MPI_ID .EQ. ROOT) THEN
-    !PRINT *, 'MUMPS analysis ... done'
 ENDIF
 !-------------------------------------------------------------------------------
 ! MUMPS: factorize, JOB = 2
